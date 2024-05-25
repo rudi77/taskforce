@@ -1,4 +1,5 @@
 ﻿using Configuration;
+using Memory;
 using Planning;
 using Taskforce.Agent;
 using Taskforce.LLM;
@@ -9,25 +10,26 @@ namespace App
     {
         static async Task Main(string[] args)
         {
-            // read config
             var config = TaskforceConfig.Create("./sample/taskforce_invoice.yaml");
 
-            // build agent
             var llm = new OpenAILLM();
+
             var planner = new Planner(llm)
             {
                 GeneralInstruction = config.PlanningConfig.GeneralInstruction,
                 AnswerInstruction = config.PlanningConfig.AnswerInstruction
             };
 
-            var agent = new Agent(llm, planning: planner)
+            var shortTermMemory = new ShortTermMemory();
+
+            var agent = new Agent(llm, planning: planner, shortTermMemory: shortTermMemory)
             {
                 Role = config.AgentConfigs[0].Role,
                 Mission = config.AgentConfigs[0].Mission,
             };
 
             // execute mission
-            var response = await agent.ExecuteAsync(Query());
+            var response = await agent.ExecuteAsync(Query(), Content());
 
             await Console.Out.WriteLineAsync(response);
 
@@ -36,9 +38,14 @@ namespace App
 
         static string Query()
         {
-            var query = @"
-                User: Extract all contacts from the invoice and return them as a JSON object. Differentiate between invoice sender and receiver.
+            var query = "User: Extract all contacts from the invoice and return them as a JSON object. Differentiate between invoice sender and receiver.";
 
+            return query;
+        }
+
+        static string Content()
+        {
+            return @"
                 Invoice:
                 RECHNUNG
                 Handelsagentur Fux
@@ -76,8 +83,6 @@ namespace App
                 30 Tage netto
                 Alle Zahlungen an Handelsagentur Fux
             ";
-
-            return query;
         }
     }
 }

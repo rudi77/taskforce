@@ -73,31 +73,14 @@
         {
             "action": "Final Answer",
             "action_input": {
-            "line_items": [
-                {
-                    "description": "Steinway Konzert Flügel Weiß",
-                    "quantity": "1",
-                    "tax_rate": "20 %",
-                    "price_net": "499 000.00 €"
+                "sender": {
+                    "name": "<Sender Name>",
+                    "address": "<Sender Address>"
                 },
-                {
-                    "description": "Dirigierstab Elfenbein",
-                    "quantity": "1",
-                    "tax_rate": "20 %",
-                    "price_net": "780.00 €"
-                },
-                {
-                    "description": "nVidia GPU M60 'Tesla'",
-                    "quantity": "4",
-                    "tax_rate": "20 %",
-                    "price_net": "28 560.00 €"
-                },
-                {
-                    "description": "Mars Riegel",
-                    "quantity": "1000",
-                    "tax_rate": "10 %",
-                    "price_net": "800.00 €"
-                }]
+                "receiver": {
+                    "name": "<Receiver Name>",
+                    "address": "<Receiver Address>"
+                }
             }
         }
 

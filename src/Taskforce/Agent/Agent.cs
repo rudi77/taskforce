@@ -1,4 +1,5 @@
-﻿using Taskforce.Abstractions;
+﻿using System.Text;
+using Taskforce.Abstractions;
 
 namespace Taskforce.Agent
 {
@@ -43,12 +44,27 @@ namespace Taskforce.Agent
         /// <returns>The mission's output</returns>
         public async Task<string> ExecuteAsync(string userPrompt)
         {
+            var subQuestionAnswer = new StringBuilder();
+
             // ask planner for a break down
             var planningResponse = await _planning.PlanAsync(userPrompt);
 
-            var systemPrompt = GetSystemPrompt();
+            if (planningResponse != null && planningResponse.Any()) 
+            {
+                // TODO: only for testing purpose - see query string in Program.cs. Question and content must be separated
+                var subPrompt = userPrompt.Split('\n').Skip(2).Aggregate((a,b) => a + "\n" + b);
 
-            var response = await _illm.SendMessageAsync(systemPrompt, userPrompt);
+                foreach (var subquestion in planningResponse)
+                {
+                    await Console.Out.WriteLineAsync(subquestion + "\n");
+                    var subResponse = await _illm.SendMessageAsync(subquestion, subPrompt);
+                    await Console.Out.WriteLineAsync(subResponse.ToString() + "\n\n");
+                    subQuestionAnswer.AppendLine(subquestion).AppendLine(subResponse.ToString());
+                }
+            }
+
+            var systemPrompt = GetSystemPrompt();
+            var response = await _illm.SendMessageAsync(systemPrompt, subQuestionAnswer.ToString() + "\n\n" + userPrompt);
 
             return response.ToString();
         }

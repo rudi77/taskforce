@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net6.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Agent\Agent.csproj" />
+    <ProjectReference Include="..\LLM\LLM.csproj" />
+    <ProjectReference Include="..\Memory\Memory.csproj" />
+    <ProjectReference Include="..\Planning\Planning.csproj" />
+    <ProjectReference Include="..\Taskforce.Abstractions\Taskforce.Abstractions.csproj" />
+    <ProjectReference Include="..\Tool\Tool.csproj" />
+  </ItemGroup>
+
+</Project>

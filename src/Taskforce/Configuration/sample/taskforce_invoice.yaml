@@ -12,15 +12,14 @@
         {
             "action": "Final Answer",
             "action_input": {
-            "line_items": [
-                {
-                    "description": "<Item Description>",
-                    "quantity": "<Quantity>",
-                    "tax_rate": "<Tax Rate>",
-                    "price_net": "<Price (Net)>"
+                "sender": {
+                    "name": "<Sender Name>",
+                    "address": "<Sender Address>"
                 },
-                // Repeat the above structure for each line item found in the invoice
-                ]
+                "receiver": {
+                    "name": "<Receiver Name>",
+                    "address": "<Receiver Address>"
+                }
             }
         }
 

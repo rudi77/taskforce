@@ -12,7 +12,7 @@ namespace ConfigurationTest
         [Test]
         public void Create_Should_Return_TaskforceConfig_Object()
         {
-            var config = TaskforceConfig.Create("./sample/taskforce.yaml");
+            var config = TaskforceConfig.Create("./sample/taskforce_invoice.yaml");
             Assert.IsNotNull(config);
         }
     }

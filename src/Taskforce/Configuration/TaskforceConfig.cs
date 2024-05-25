@@ -7,6 +7,8 @@ namespace Configuration
     {
         public List<AgentConfig> AgentConfigs { get; set; }
 
+        public PlanningConfig PlanningConfig { get; set; }
+
         public static TaskforceConfig Create(string configFile)
         {
             if (!File.Exists(configFile))

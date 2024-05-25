@@ -103,3 +103,14 @@
 
         Process the invoice provided by the user and extract the necessary line items.
         Remember to STRICTLY adhere to the aforementioned JSON structure and provide NO additional context or explanation.
+PlanningConfig:
+    GeneralInstruction: |
+        GENERAL INSTRUCTIONS
+        You are a domain expert. Your task is to break down a complex question into simpler sub-parts.
+        If you cannot break down the question into simpler sub-parts then return the original question.
+    AnswerInstruction: |
+        ANSWERT FORMAT
+        Please return the sub questions in the following json format.
+        Remember to STRICTLY adhere to the below mentioned JSON structure and provide NO additional context or explanation.
+
+        {"sub-question": ["<FILL>"]}

@@ -16,13 +16,13 @@ namespace Taskforce.Agent
         private readonly IPlanning _planning;
         private readonly IList<ITool> _tools;
 
-        public Agent(ILLM illm, IMemory shortTermMemory, IMemory longTermMemory, IPlanning planning, IList<ITool> tools)
+        public Agent(ILLM illm, IMemory shortTermMemory=null, IMemory longTermMemory=null, IPlanning planning=null, IList<ITool> tools=null)
         {
             _illm = illm ?? throw new ArgumentNullException(nameof(illm));
-            _shortTermMemory = shortTermMemory ?? throw new ArgumentNullException(nameof(shortTermMemory));
-            _longTermMemory = longTermMemory ?? throw new ArgumentNullException(nameof(longTermMemory));
+            //_shortTermMemory = shortTermMemory ?? throw new ArgumentNullException(nameof(shortTermMemory));
+            //_longTermMemory = longTermMemory ?? throw new ArgumentNullException(nameof(longTermMemory));
             _planning = planning ?? throw new ArgumentNullException(nameof(planning));
-            _tools = tools ?? throw new ArgumentNullException(nameof(tools));
+            //_tools = tools ?? throw new ArgumentNullException(nameof(tools));
         }
 
         /// <summary>
@@ -43,6 +43,9 @@ namespace Taskforce.Agent
         /// <returns>The mission's output</returns>
         public async Task<string> ExecuteAsync(string userPrompt)
         {
+            // ask planner for a break down
+            var planningResponse = await _planning.PlanAsync(userPrompt);
+
             var systemPrompt = GetSystemPrompt();
 
             var response = await _illm.SendMessageAsync(systemPrompt, userPrompt);

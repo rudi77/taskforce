@@ -10,7 +10,8 @@ namespace App
     {
         static async Task Main(string[] args)
         {
-            var config = TaskforceConfig.Create("./sample/taskforce_invoice.yaml");
+            //var config = TaskforceConfig.Create("./sample/taskforce_invoice.yaml");
+            var config = TaskforceConfig.Create("./sample/taskforce_fxrate.yaml");
 
             var llm = new OpenAILLM();
 
@@ -29,16 +30,16 @@ namespace App
             };
 
             // execute mission
-            var response = await agent.ExecuteAsync(Query(), Content());
+            var response = await agent.ExecuteAsync(Query(), Content2());
 
-            await Console.Out.WriteLineAsync(response);
+            await Console.Out.WriteLineAsync("Final response:\n" + response);
 
             return;
         }
 
         static string Query()
         {
-            var query = "User: Extract all contacts from the invoice and return them as a JSON object. Differentiate between invoice sender and receiver.";
+            var query = "User: Extract all FX rates from the invoice and return them as a JSON object. ";
 
             return query;
         }
@@ -82,6 +83,60 @@ namespace App
                 Zahlung: innerhalb von 10 Tagen 2 % Skonto
                 30 Tage netto
                 Alle Zahlungen an Handelsagentur Fux
+            ";
+        }
+
+        static string Content2()
+        {
+            return @"                
+                Pozice
+                Jednotka Cena bez DPH DPH
+                DPH Cena s DPH
+                VGM
+                VGM
+                Port Doc
+                B/L
+                OF
+                USD 123.25 to 0.9243
+                PICK UP
+                CZK 4500 to 0.0432
+                NESTOH
+                USD 90 to 0.9243
+                Sub Total
+                1
+                1
+                1
+                1
+                1
+                1
+                1
+                4,93 4,93 21 %
+                10,00 10,00 21 %
+                10,00 10,00 21 %
+                35,00 35,00 21 %
+                113,92 113,92 21 %
+                1,04 5,97
+                2,10 12,10
+                2,10 12,10
+                7,35 42,35
+                23,92 137,84
+                194,40 194,40 21 %
+                40,82 235,22
+                83,19 83,19 21 %
+                17,47 100,66
+                94,80 546,24
+                451,44
+                Cástka k úhrade: EUR 546,24
+                Celkem bez DPH
+                DPH
+                DPH 21 %
+                CZK
+                10.611,03
+                2.228,32
+                Cástka k úhrade
+                CZK
+                10.611,03
+                2.228,32               
             ";
         }
     }

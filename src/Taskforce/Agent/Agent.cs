@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using Taskforce.Abstractions;
+using Taskforce.Extensions;
 
 namespace Taskforce.Agent
 {
@@ -44,12 +45,14 @@ namespace Taskforce.Agent
         /// <param name="content">The content to be processed</param>
         /// <returns>The mission's output</returns>
         public async Task<string> ExecuteAsync(string userPrompt, string content)
-        {
+        {           
+            await Console.Out.WriteAgentLineAsync("Agent starts....");
             var systemPrompt = GetSystemPrompt();
             var instructPrompt = GetInstructPrompt(userPrompt, content);
 
-            // Plan
+            // Plan the task.
             var planningResponse = await _planning.PlanAsync(instructPrompt);
+
             await ExecuteSubQueries(content, planningResponse);
             
             _shortTermMemory.Store(instructPrompt);
@@ -70,12 +73,12 @@ namespace Taskforce.Agent
                 foreach (var subquestion in planningResponse)
                 {
                     _shortTermMemory.Store($"{subquestion}");
-                    await Console.Out.WriteLineAsync(subquestion + "\n");
+                    await Console.Out.WritePlannerLineAsync("Sub-Question:\n" + subquestion + "\n");
 
                     var subResponse = await _illm.SendMessageAsync(subquestion, content);
                     _shortTermMemory.Store(subResponse.ToString());
 
-                    await Console.Out.WriteLineAsync(subResponse.ToString() + "\n\n");
+                    await Console.Out.WriteAgentLineAsync("Sub-Response:\n" + subResponse.ToString() + "\n\n");
 
                     subQuestionAnswer.AppendLine(subquestion).AppendLine(subResponse.ToString());
                 }

@@ -1,4 +1,5 @@
 ﻿using Taskforce.Abstractions;
+using Taskforce.Extensions;
 
 namespace Memory
 {
@@ -28,6 +29,8 @@ namespace Memory
 
         public void Store(string data)
         {
+            Console.Out.WriteShortTermMemoryLine("ShortTermMemory gets updated...");
+
             _memory.Add(data);
         }
     }

@@ -33,7 +33,7 @@ namespace Taskforce.LLM
             var messages = CreateMessages(systemPrompt, userPrompt);
 
             // TODO: make the model configurable
-            var chatRequest = new ChatRequest(messages, Model.GPT3_5_Turbo);
+            var chatRequest = new ChatRequest(messages, Model.GPT4o /*.GPT3_5_Turbo*/, temperature: 0.0);
             var response = await _client.ChatEndpoint.GetCompletionAsync(chatRequest);
 
             return response.FirstChoice.ToString();

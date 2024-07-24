@@ -1,4 +1,5 @@
 ﻿using Taskforce.Abstractions;
+using Taskforce.Extensions;
 
 namespace Planning
 {
@@ -18,6 +19,7 @@ namespace Planning
         public async Task<List<string>> PlanAsync(string userPrompt)
         {
             // TODO: Exception handling.
+            await Console.Out.WritePlannerLineAsync("Planner starts planning...");
 
             var questionAnswerPromptPart = UserQuestion(userPrompt) + "\n" + AnswerInstruction;
             var response = await  _llm.SendMessageAsync(GeneralInstruction, questionAnswerPromptPart);

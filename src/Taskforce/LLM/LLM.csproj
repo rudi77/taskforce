@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="OpenAI-DotNet" Version="7.7.8" />
+    <PackageReference Include="OpenAI-DotNet" Version="8.1.1" />
   </ItemGroup>
 
   <ItemGroup>

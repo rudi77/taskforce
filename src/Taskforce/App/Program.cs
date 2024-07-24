@@ -13,7 +13,7 @@ namespace App
             //var config = TaskforceConfig.Create("./sample/taskforce_invoice.yaml");
             var config = TaskforceConfig.Create("./sample/taskforce_fxrate.yaml");
 
-            var llm = new OpenAILLM();
+            var llm = new OpenAIAssistantClient();
 
             var planner = new Planner(llm)
             {

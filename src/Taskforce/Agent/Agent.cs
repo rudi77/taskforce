@@ -53,7 +53,7 @@ namespace Taskforce.Agent
             // Plan the task.
             var planningResponse = await _planning.PlanAsync(instructPrompt);
 
-            await ExecuteSubQueries(content, planningResponse);
+            await ExecuteSubQueriesAsync(content, planningResponse);
             
             _shortTermMemory.Store(instructPrompt);
             var context = _shortTermMemory.Get();
@@ -64,9 +64,36 @@ namespace Taskforce.Agent
             return response.ToString();
         }
 
-        private async Task ExecuteSubQueries(string content, List<string> planningResponse)
+        /// <summary>
+        /// Agent executes its mission with vision support
+        /// </summary>
+        /// <param name="userPrompt"></param>
+        /// <param name="content"></param>
+        /// <param name="filePaths">Files to be uploaded</param>
+        /// <returns></returns>
+        public async Task<string> ExecuteAsync(string userPrompt, string content, IList<string> filePaths)
         {
-            // Excute provided sub tasks/questions from Planner
+            await Console.Out.WriteAgentLineAsync("Agent starts....");
+            var systemPrompt = GetSystemPrompt();
+            var instructPrompt = GetInstructPrompt(userPrompt, content);
+
+            // Plan the task.
+            var planningResponse = await _planning.PlanAsync(instructPrompt);
+
+            await ExecuteSubQueriesAsync(content, filePaths, planningResponse);
+
+            _shortTermMemory.Store(instructPrompt);
+            var context = _shortTermMemory.Get();
+
+            // Get final answer
+            var response = await _illm.SendMessageAsync(systemPrompt, context, filePaths);
+
+            return response.ToString();
+        }
+
+        private async Task ExecuteSubQueriesAsync(string content, List<string> planningResponse)
+        {
+            // Execute provided sub tasks/questions from Planner
             var subQuestionAnswer = new StringBuilder();
             if (planningResponse != null && planningResponse.Any())
             {
@@ -76,6 +103,27 @@ namespace Taskforce.Agent
                     await Console.Out.WritePlannerLineAsync("Sub-Question:\n" + subquestion + "\n");
 
                     var subResponse = await _illm.SendMessageAsync(subquestion, content);
+                    _shortTermMemory.Store(subResponse.ToString());
+
+                    await Console.Out.WriteAgentLineAsync("Sub-Response:\n" + subResponse.ToString() + "\n\n");
+
+                    subQuestionAnswer.AppendLine(subquestion).AppendLine(subResponse.ToString());
+                }
+            }
+        }
+
+        private async Task ExecuteSubQueriesAsync(string content, IList<string> filePaths, List<string> planningResponse)
+        {
+            // Execute provided sub tasks/questions from Planner
+            var subQuestionAnswer = new StringBuilder();
+            if (planningResponse != null && planningResponse.Any())
+            {
+                foreach (var subquestion in planningResponse)
+                {
+                    _shortTermMemory.Store($"{subquestion}");
+                    await Console.Out.WritePlannerLineAsync("Sub-Question:\n" + subquestion + "\n");
+
+                    var subResponse = await _illm.SendMessageAsync(subquestion, content, filePaths);
                     _shortTermMemory.Store(subResponse.ToString());
 
                     await Console.Out.WriteAgentLineAsync("Sub-Response:\n" + subResponse.ToString() + "\n\n");

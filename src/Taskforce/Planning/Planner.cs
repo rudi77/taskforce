@@ -28,7 +28,19 @@ namespace Planning
             return questions.SubQuestions;
         }
 
-        private static string UserQuestion(string userPrompt) {
+        public async Task<List<string>> PlanAsync(string userPrompt, IList<string> imagePaths)
+        {
+            await Console.Out.WritePlannerLineAsync("Planner starts planning...");
+
+            var questionAnswerPromptPart = UserQuestion(userPrompt) + "\n" + AnswerInstruction;
+            var response = await _llm.SendMessageAsync(GeneralInstruction, questionAnswerPromptPart, imagePaths);
+            var questions = Newtonsoft.Json.JsonConvert.DeserializeObject<Questions>(response.ToString());
+
+            return questions.SubQuestions;
+        }
+
+        private static string UserQuestion(string userPrompt)
+        {
             return "USER QUESTION" + "\n" + userPrompt;
         }
     }

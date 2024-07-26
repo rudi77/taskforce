@@ -24,7 +24,7 @@
 
         Here is an example of previous interactions that were correctly handled:
 
-        User: Extract details from the receipt and return them as a JSON object.
+        User: Extract details from the uploaded image receipt and return them as a JSON object.
 
         Receipt:
         [image]
@@ -46,7 +46,9 @@
             }
         }
 
-        Process the receipt provided by the user and extract the necessary details. Remember to STRICTLY adhere to the aforementioned JSON structure and provide NO additional context or explanation.
+        Process the receipt provided by the user and extract the necessary details.
+        Set the value of a detail to "" if it is missing on the receipt.
+        Remember to STRICTLY adhere to the aforementioned JSON structure and provide NO additional context or explanation.
 
 PlanningConfig:
     GeneralInstruction: |

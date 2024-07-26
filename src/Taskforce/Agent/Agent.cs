@@ -80,9 +80,14 @@ namespace Taskforce.Agent
             // Plan the task.
             var planningResponse = await _planning.PlanAsync(instructPrompt);
 
-            await ExecuteSubQueriesAsync(content, filePaths, planningResponse);
+            if (planningResponse.Any())
+            {
+                await ExecuteSubQueriesAsync(content, filePaths, planningResponse);
+            }
+            
 
             _shortTermMemory.Store(instructPrompt);
+
             var context = _shortTermMemory.Get();
 
             // Get final answer

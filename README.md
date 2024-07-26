@@ -36,6 +36,47 @@ The framework includes various tools that the Agent can use to perform specific 
 
 The LLM component handles the interaction with the large language model, enabling the Agent to process natural language text effectively.
 
+## Example Usage
+Below is an example of how to use Taskforce to create an agent that extracts FX rates from an invoice and returns them as a JSON object.
+
+```Csharp
+static async Task Main(string[] args)
+{
+    //var config = TaskforceConfig.Create("./sample/taskforce_invoice.yaml");
+    var config = TaskforceConfig.Create("./sample/taskforce_fxrate.yaml");
+
+    var llm = new OpenAILLM();
+
+    var planner = new Planner(llm)
+    {
+        GeneralInstruction = config.PlanningConfig.GeneralInstruction,
+        AnswerInstruction = config.PlanningConfig.AnswerInstruction
+    };
+
+    var shortTermMemory = new ShortTermMemory();
+
+    var agent = new Agent(llm, planning: planner, shortTermMemory: shortTermMemory)
+    {
+        Role = config.AgentConfigs[0].Role,
+        Mission = config.AgentConfigs[0].Mission,
+    };
+
+    // execute mission
+    var response = await agent.ExecuteAsync(Query(), Content2());
+
+    await Console.Out.WriteLineAsync("Final response:\n" + response);
+
+    return;
+}
+
+static string Query()
+{
+    var query = "User: Extract all FX rates from the invoice and return them as a JSON object. ";
+
+    return query;
+}
+```
+
 
 ## Contribution
 

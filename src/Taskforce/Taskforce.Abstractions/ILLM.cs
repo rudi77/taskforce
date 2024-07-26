@@ -18,8 +18,8 @@
         /// </summary>
         /// <param name="systemPrompt"></param>
         /// <param name="userPrompt"></param>
-        /// <param name="images"></param>
+        /// <param name="filePath"></param>
         /// <returns></returns>
-        Task<object?> SendMessageAsync(string systemPrompt, string userPrompt, IList<byte[]> images);
+        Task<object?> SendMessageAsync(string systemPrompt, string userPrompt, IList<string> filePaths);
     }
 }

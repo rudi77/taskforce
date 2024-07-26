@@ -8,5 +8,7 @@
         /// <param name="userPrompt"></param>
         /// <returns></returns>
         Task<List<string>> PlanAsync(string userPrompt);
+
+        Task<List<string>> PlanAsync(string userPrompt, IList<string> imagePaths);
     }
 }

@@ -14,7 +14,8 @@ namespace App
             //var config = TaskforceConfig.Create("./sample/taskforce_fxrate.yaml");
             //var config = TaskforceConfig.Create("./sample/taskforce_invoice2.yaml");
             var config = TaskforceConfig.Create("./sample/taskforce_receipt.yaml");
-            var receipts = new List<string> { @"C:\Users\rudi\Documents\297581.png" };
+            //var receipts = new List<string> { @"C:\Users\rudi\Documents\297581.png" };
+            var receipts = new List<string> { @"C:\Users\rudi\Documents\Arbeit\CSS\297595.jpeg.png" };
             var llm = new OpenAIAssistantClient();
 
             var planner = new Planner(llm)
@@ -23,6 +24,7 @@ namespace App
                 AnswerInstruction = config.PlanningConfig.AnswerInstruction
             };
 
+            var noPlanPlanner = new NoPlanPlanner();
             var shortTermMemory = new ShortTermMemory();
 
             var agent = new Agent(llm, planning: planner, shortTermMemory: shortTermMemory)
@@ -32,7 +34,6 @@ namespace App
             };
 
             // execute mission
-            //var response = await agent.ExecuteAsync(Query(), Content4());
             var response = await agent.ExecuteAsync(Query(), string.Empty, receipts);
 
             await Console.Out.WriteLineAsync("Final response:\n" + response);

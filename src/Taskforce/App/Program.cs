@@ -1,6 +1,7 @@
 ﻿using Configuration;
 using Memory;
 using Planning;
+using Planning.Strategy;
 using Taskforce.Agent;
 using Taskforce.LLM;
 
@@ -16,9 +17,9 @@ namespace App
             var config = TaskforceConfig.Create("./sample/taskforce_receipt.yaml");
             //var receipts = new List<string> { @"C:\Users\rudi\Documents\297581.png" };
             var receipts = new List<string> { @"C:\Users\rudi\Documents\Arbeit\CSS\297595.jpeg.png" };
-            var llm = new OpenAIAssistantClient();
 
-            var planner = new Planner(llm)
+           
+            var planner = new Planner(new OpenAIAssistantClient(), new ChainOfThoughtStrategy())
             {
                 GeneralInstruction = config.PlanningConfig.GeneralInstruction,
                 AnswerInstruction = config.PlanningConfig.AnswerInstruction
@@ -27,7 +28,7 @@ namespace App
             var noPlanPlanner = new NoPlanPlanner();
             var shortTermMemory = new ShortTermMemory();
 
-            var agent = new Agent(llm, planning: planner, shortTermMemory: shortTermMemory)
+            var agent = new Agent(new OpenAIAssistantClient(), planning: planner, shortTermMemory: shortTermMemory)
             {
                 Role = config.AgentConfigs[0].Role,
                 Mission = config.AgentConfigs[0].Mission,

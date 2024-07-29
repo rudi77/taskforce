@@ -18,8 +18,8 @@
         /// </summary>
         /// <param name="systemPrompt"></param>
         /// <param name="userPrompt"></param>
-        /// <param name="filePath"></param>
+        /// <param name="fileIds">A list of files which were previously uploaded</param>
         /// <returns></returns>
-        Task<object?> SendMessageAsync(string systemPrompt, string userPrompt, IList<string> filePaths);
+        Task<object?> SendMessageAsync(string systemPrompt, string userPrompt, IList<string> fileIds);
     }
 }

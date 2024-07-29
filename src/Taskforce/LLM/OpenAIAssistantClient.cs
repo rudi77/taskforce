@@ -7,7 +7,7 @@ using System.Diagnostics;
 
 namespace Taskforce.LLM
 {
-    public class OpenAIAssistantClient : ILLM
+    public class OpenAIAssistantClient : LLMBase
     {
 #pragma warning disable OPENAI001        
         private readonly OpenAIClient _openAIClient;
@@ -33,7 +33,7 @@ namespace Taskforce.LLM
 
         #region ILLM interface methods
 
-        public async Task<object?> SendMessageAsync(string systemPrompt, string userPrompt)
+        public override async Task<object?> SendMessageAsync(string systemPrompt, string userPrompt)
         {
             var assistantClient = _openAIClient.GetAssistantClient();
             var assistant = await assistantClient.CreateAssistantAsync(
@@ -49,52 +49,40 @@ namespace Taskforce.LLM
             };
 
             ThreadRun run = await assistantClient.CreateThreadAndRunAsync(assistant, threadOptions, new RunCreationOptions { Temperature = 0.0f });
+            var messages = await GetMessageAsync(run, assistantClient);
 
-            
-            while (!run.Status.IsTerminal)
-            {
-                await Task.Delay(TimeSpan.FromSeconds(1));
-                run = await assistantClient.GetRunAsync(run.ThreadId, run.Id);
-            }
+            // Debug.Assert(messages.Count == 1);
 
-            if (run.Status == RunStatus.Completed)
-            {
-                var messagePages = assistantClient.GetMessagesAsync(run.ThreadId);
+            var message = messages[0];
 
-                var messages = messagePages.AsPages();
-                
-                await foreach (ResultPage<ThreadMessage> resultPage in messages) 
-                { 
-                    foreach (var message in resultPage)
-                    {
-                        // TODO: check content length ==  and use FirstOrDefault 
-                        return message.Content.First().Text;
-                    }
-                      
-                }
-            }
+            await Console.Out.WriteLineAsync(message.ToString());
 
-            return null;
+            return message;
         }
 
-        public async Task<object?> SendMessageAsync(string systemPrompt, string userPrompt, IList<string> filePaths)
+        public override async Task<object?> SendMessageAsync(string systemPrompt, string userPrompt, IList<string> imageIds)
         {
             var assistantClient = _openAIClient.GetAssistantClient();
             var assistant = await assistantClient.CreateAssistantAsync("gpt-4o-mini", new AssistantCreationOptions { Instructions = systemPrompt });
-            var uploadedFiles = await UploadFilesForVisionAsync(filePaths);
             var messageContentList = string.IsNullOrEmpty(userPrompt) 
                 ? new List<MessageContent>() 
                 : new List<MessageContent> { userPrompt };
 
-            uploadedFiles.ForEach(uF => messageContentList.Add(MessageContent.FromImageFileId(uF.Id)));
+            foreach (var fileId in imageIds)
+            {
+                messageContentList.Add(MessageContent.FromImageFileId(fileId));
+            }
+
 
             var threadOptions = new ThreadCreationOptions()
             {
                 InitialMessages =
                 {
                     new ThreadInitializationMessage(MessageRole.User, messageContentList)
-                }
+                },               
             };
+
+
 
             ThreadRun run = await assistantClient.CreateThreadAndRunAsync(assistant, threadOptions, new RunCreationOptions { Temperature = 0.0f });
 
@@ -109,14 +97,21 @@ namespace Taskforce.LLM
             return message;
         }
 
+        public override async Task<string[]> UploadFieAsync(IList<string> imagePaths)
+        {
+            var uploadedFiles = await UploadFilesForVisionAsync(imagePaths);
+
+            return uploadedFiles.Select(fi => fi.Id).ToArray();
+        }
+
         #endregion
 
-        private async Task<List<OpenAIFileInfo>> UploadFilesForVisionAsync(IList<string> filePaths)
+        private async Task<List<OpenAIFileInfo>> UploadFilesForVisionAsync(IList<string> imagePaths)
         {
             var fileClient = _openAIClient.GetFileClient();
             var fileUploadResults = new List<OpenAIFileInfo>();
 
-            foreach (var filePath in filePaths)
+            foreach (var filePath in imagePaths)
             {
                 if (File.Exists(filePath))
                 {

@@ -1,8 +1,7 @@
 ﻿using System.Text;
 using Taskforce.Abstractions;
-using Taskforce.Extensions;
 
-namespace Taskforce.Agent
+namespace Taskforce.Core
 {
     /// <summary>
     /// An Agent manages the main workflow including planning, memory management, LLM

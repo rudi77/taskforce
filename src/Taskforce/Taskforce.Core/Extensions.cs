@@ -1,4 +1,4 @@
-﻿namespace Taskforce.Extensions
+﻿namespace Taskforce.Core
 {
     public static class Extensions
     {

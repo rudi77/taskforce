@@ -1,9 +1,6 @@
 ﻿using Configuration;
-using Memory;
-using Planning;
-using Planning.Strategy;
-using Taskforce.Agent;
-using Taskforce.LLM;
+using Taskforce.Core;
+using Taskforce.Core.Strategy;
 
 namespace App
 {

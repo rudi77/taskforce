@@ -1,6 +1,6 @@
 ﻿using Taskforce.Abstractions;
 
-namespace Planning.Strategy
+namespace Taskforce.Core.Strategy
 {
     public class ChainOfThoughtStrategy : IPlanningStrategy
     {

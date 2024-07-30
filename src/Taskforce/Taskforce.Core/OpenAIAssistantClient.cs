@@ -5,7 +5,7 @@ using OpenAI.Files;
 using OpenAI;
 using System.Diagnostics;
 
-namespace Taskforce.LLM
+namespace Taskforce.Core
 {
     public class OpenAIAssistantClient : LLMBase
     {

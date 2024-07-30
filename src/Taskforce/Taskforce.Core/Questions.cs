@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json;
 
-namespace Planning
+namespace Taskforce.Core
 {
     internal class Questions
     {

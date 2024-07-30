@@ -1,7 +1,6 @@
 ﻿using Taskforce.Abstractions;
-using Taskforce.Extensions;
 
-namespace Memory
+namespace Taskforce.Core
 {
     /// <summary>
     /// Stores intermediate results during data processing. 

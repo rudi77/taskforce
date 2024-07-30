@@ -31,6 +31,11 @@ namespace Taskforce.Core
         }
 
         /// <summary>
+        /// The Agent's name
+        /// </summary>
+        public string Name => _config.Name;
+
+        /// <summary>
         /// Describes the role of an agent.
         /// </summary>
         public string Role => _config.Role;
@@ -49,7 +54,7 @@ namespace Taskforce.Core
         /// <returns>The mission's output</returns>
         public async Task<string> ExecuteAsync(string userPrompt, string content)
         {           
-            await Console.Out.WriteAgentLineAsync("Agent starts....");
+            await Console.Out.WriteAgentLineAsync($"Agent: '{Name}' starts....");
             var systemPrompt = GetSystemPrompt();
             var instructPrompt = GetInstructPrompt(userPrompt, content);
 
@@ -76,7 +81,7 @@ namespace Taskforce.Core
         /// <returns></returns>
         public async Task<string> ExecuteAsync(string userPrompt, string content, IList<string> imagePaths)
         {
-            await Console.Out.WriteAgentLineAsync("Agent starts....");
+            await Console.Out.WriteAgentLineAsync($"Agent: '{Name}' starts....");
             var systemPrompt = GetSystemPrompt();
             var instructPrompt = GetInstructPrompt(userPrompt, content);
 

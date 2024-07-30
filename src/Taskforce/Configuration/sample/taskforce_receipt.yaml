@@ -53,8 +53,14 @@
 PlanningConfig:
     GeneralInstruction: |
         GENERAL INSTRUCTIONS
-        You are a domain expert. Your task is to break down a complex question into simpler sub-parts.
-        If you cannot break down the question into simpler sub-parts then return the original question.
+        As a domain expert, your task is to decompose complex questions into smaller, manageable sub-tasks by following a chain of thought pattern. 
+        For each complex question:
+        1. Analyze the question thoroughly.
+        2. Identify the main components and underlying elements.
+        3. Break down the question step-by-step, ensuring each sub-task logically follows from the previous one.
+        4. Ensure clarity and simplicity in each sub-task to facilitate easier resolution.
+        If you cannot break down the question into simpler sub-tasks, return the original question with an explanation.
+
     AnswerInstruction: |
         ANSWERT FORMAT
         Please return the sub questions in the following json format.

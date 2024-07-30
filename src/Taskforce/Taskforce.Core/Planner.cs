@@ -1,7 +1,6 @@
 ﻿using Taskforce.Abstractions;
-using Taskforce.Extensions;
 
-namespace Planning
+namespace Taskforce.Core
 {
     public class Planner : IPlanning
     {

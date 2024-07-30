@@ -20,9 +20,10 @@ namespace Taskforce.Core
         public Agent(LLMBase illm, IMemory shortTermMemory=null, IMemory longTermMemory=null, IPlanning planning=null, IList<ITool> tools=null)
         {
             _llm = illm ?? throw new ArgumentNullException(nameof(illm));
-            _shortTermMemory = shortTermMemory ?? throw new ArgumentNullException(nameof(shortTermMemory));
-            //_longTermMemory = longTermMemory ?? throw new ArgumentNullException(nameof(longTermMemory));
+            _shortTermMemory = shortTermMemory ?? throw new ArgumentNullException(nameof(shortTermMemory));            
             _planning = planning ?? throw new ArgumentNullException(nameof(planning));
+
+            //_longTermMemory = longTermMemory ?? throw new ArgumentNullException(nameof(longTermMemory));
             //_tools = tools ?? throw new ArgumentNullException(nameof(tools));
         }
 
@@ -106,9 +107,11 @@ namespace Taskforce.Core
                 foreach (var subquestion in planningResponse)
                 {
                     _shortTermMemory.Store($"{subquestion}");
+
                     await Console.Out.WritePlannerLineAsync("Sub-Question:\n" + subquestion + "\n");
 
                     var subResponse = await _llm.SendMessageAsync(subquestion, content);
+
                     _shortTermMemory.Store(subResponse.ToString());
 
                     await Console.Out.WriteAgentLineAsync("Sub-Response:\n" + subResponse.ToString() + "\n\n");
@@ -129,7 +132,7 @@ namespace Taskforce.Core
                     _shortTermMemory.Store($"{subquestion}");
                     await Console.Out.WritePlannerLineAsync("Sub-Question:\n" + subquestion + "\n");
 
-                    var subResponse = await _llm.SendMessageAsync(subquestion, content, fileIds);
+                    var subResponse = await _llm.SendMessageAsync(Role, GetInstructPrompt(subquestion, content), fileIds);
                     _shortTermMemory.Store(subResponse.ToString());
 
                     await Console.Out.WriteAgentLineAsync("Sub-Response:\n" + subResponse.ToString() + "\n\n");

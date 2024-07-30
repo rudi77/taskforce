@@ -1,7 +1,7 @@
 ﻿using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
-namespace Configuration
+namespace Taskforce.Configuration
 {
     public class TaskforceConfig
     {

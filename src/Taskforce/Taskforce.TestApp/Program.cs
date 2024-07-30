@@ -1,4 +1,4 @@
-﻿using Configuration;
+﻿using Taskforce.Configuration;
 using Taskforce.Core;
 using Taskforce.Core.Strategy;
 

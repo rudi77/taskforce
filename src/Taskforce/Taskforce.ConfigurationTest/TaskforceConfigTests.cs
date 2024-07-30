@@ -1,4 +1,4 @@
-using Configuration;
+using Taskforce.Configuration;
 
 namespace ConfigurationTest
 {

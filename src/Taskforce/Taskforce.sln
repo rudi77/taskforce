@@ -5,11 +5,11 @@ VisualStudioVersion = 17.6.33927.249
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Taskforce.Abstractions", "Taskforce.Abstractions\Taskforce.Abstractions.csproj", "{D2FB2220-7B07-4260-AF2C-F70596BDE198}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "App", "App\App.csproj", "{19D52D46-6146-42B1-B17D-747D898B23EA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TaskForce.TestApp", "Taskforce.TestApp\TaskForce.TestApp.csproj", "{19D52D46-6146-42B1-B17D-747D898B23EA}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Configuration", "Configuration\Configuration.csproj", "{70F592B3-0185-4E01-B2D1-7979D48BE934}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Taskforce.Configuration", "Taskforce.Configuration\Taskforce.Configuration.csproj", "{70F592B3-0185-4E01-B2D1-7979D48BE934}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ConfigurationTest", "ConfigurationTest\ConfigurationTest.csproj", "{ED86AC3A-B576-4B6C-9610-47ACC5372E1B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Taskforce.ConfigurationTest", "Taskforce.ConfigurationTest\Taskforce.ConfigurationTest.csproj", "{ED86AC3A-B576-4B6C-9610-47ACC5372E1B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Taskforce.Core", "Taskforce.Core\Taskforce.Core.csproj", "{2670B27E-A20C-4C38-950B-9E9028969A36}"
 EndProject

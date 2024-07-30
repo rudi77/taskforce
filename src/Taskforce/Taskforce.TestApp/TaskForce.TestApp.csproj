@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -8,8 +8,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Configuration\Configuration.csproj" />
     <ProjectReference Include="..\Taskforce.Abstractions\Taskforce.Abstractions.csproj" />
+    <ProjectReference Include="..\Taskforce.Configuration\Taskforce.Configuration.csproj" />
     <ProjectReference Include="..\Taskforce.Core\Taskforce.Core.csproj" />
   </ItemGroup>
 

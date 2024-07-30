@@ -1,4 +1,4 @@
-﻿namespace Configuration
+﻿namespace Taskforce.Configuration
 {
     public class AgentConfig
     {

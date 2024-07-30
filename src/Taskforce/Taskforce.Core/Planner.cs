@@ -1,4 +1,5 @@
 ﻿using Taskforce.Abstractions;
+using Taskforce.Configuration;
 
 namespace Taskforce.Core
 {
@@ -6,16 +7,18 @@ namespace Taskforce.Core
     {
         private readonly ILLM _llm;
         private IPlanningStrategy _planningStrategy;
+        private readonly PlanningConfig _config;
 
-        public Planner(ILLM llm, IPlanningStrategy planningStrategy)
+        public Planner(ILLM llm, IPlanningStrategy planningStrategy, PlanningConfig config)
         {
             _llm = llm ?? throw new ArgumentNullException(nameof(llm));
             _planningStrategy = planningStrategy;
+            _config = config;
         }
 
-        public string GeneralInstruction { get; set; }
+        public string GeneralInstruction => _config.GeneralInstruction;
 
-        public string AnswerInstruction { get; set; }
+        public string AnswerInstruction => _config.AnswerInstruction;
 
         public void SetStrategy(IPlanningStrategy planningStrategy)
         {

@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using Taskforce.Abstractions;
+using Taskforce.Configuration;
 
 namespace Taskforce.Core
 {
@@ -16,12 +17,14 @@ namespace Taskforce.Core
         private readonly IMemory _longTermMemory;
         private readonly IPlanning _planning;
         private readonly IList<ITool> _tools;
+        private readonly AgentConfig _config;
 
-        public Agent(LLMBase illm, IMemory shortTermMemory=null, IMemory longTermMemory=null, IPlanning planning=null, IList<ITool> tools=null)
+        public Agent(LLMBase illm, IMemory shortTermMemory, IPlanning planning, AgentConfig config, IMemory longTermMemory=null,  IList<ITool> tools=null)
         {
             _llm = illm ?? throw new ArgumentNullException(nameof(illm));
             _shortTermMemory = shortTermMemory ?? throw new ArgumentNullException(nameof(shortTermMemory));            
             _planning = planning ?? throw new ArgumentNullException(nameof(planning));
+            _config =  config ?? throw new ArgumentNullException(nameof(config));
 
             //_longTermMemory = longTermMemory ?? throw new ArgumentNullException(nameof(longTermMemory));
             //_tools = tools ?? throw new ArgumentNullException(nameof(tools));
@@ -30,12 +33,12 @@ namespace Taskforce.Core
         /// <summary>
         /// Describes the role of an agent.
         /// </summary>
-        public string Role{ get; set; }
+        public string Role => _config.Role;
 
         /// <summary>
         /// The agent's mission. 
         /// </summary>
-        public string Mission { get; set; }
+        public string Mission => _config.Mission;
 
 
         /// <summary>

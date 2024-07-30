@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Taskforce.Abstractions\Taskforce.Abstractions.csproj" />
+    <ProjectReference Include="..\Taskforce.Configuration\Taskforce.Configuration.csproj" />
   </ItemGroup>
 
 </Project>

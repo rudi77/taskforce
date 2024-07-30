@@ -8,29 +8,11 @@ namespace App
     {
         static async Task Main(string[] args)
         {
-            //var config = TaskforceConfig.Create("./sample/taskforce_invoice.yaml");
-            //var config = TaskforceConfig.Create("./sample/taskforce_fxrate.yaml");
-            //var config = TaskforceConfig.Create("./sample/taskforce_invoice2.yaml");
-            var config = TaskforceConfig.Create("./sample/taskforce_receipt.yaml");
-            //var receipts = new List<string> { @"C:\Users\rudi\Documents\297581.png" };
+            
             var receipts = new List<string> { @"C:\Users\rudi\Documents\Arbeit\CSS\297595.jpeg.png" };
 
-           
-            var planner = new Planner(new OpenAIAssistantClient(), new ChainOfThoughtStrategy())
-            {
-                GeneralInstruction = config.PlanningConfig.GeneralInstruction,
-                AnswerInstruction = config.PlanningConfig.AnswerInstruction
-            };
-
-            var noPlanPlanner = new NoPlanPlanner();
-            var shortTermMemory = new ShortTermMemory();
-
-            var agent = new Agent(new OpenAIAssistantClient(), planning: planner, shortTermMemory: shortTermMemory)
-            {
-                Role = config.AgentConfigs[0].Role,
-                Mission = config.AgentConfigs[0].Mission,
-            };
-
+            var agent = CreateAgent("./sample/taskforce_receipt.yaml");
+            
             // execute mission
             var response = await agent.ExecuteAsync(Query(), string.Empty, receipts);
 
@@ -38,6 +20,29 @@ namespace App
 
             return;
         }
+
+        static Agent CreateAgent(string configFile)
+        {
+            var config = TaskforceConfig.Create(configFile);
+
+            var planner = new Planner(new OpenAIAssistantClient(), new ChainOfThoughtStrategy())
+            {
+                GeneralInstruction = config.PlanningConfig.GeneralInstruction,
+                AnswerInstruction = config.PlanningConfig.AnswerInstruction
+            };
+
+            var noPlanPlanner = new NoPlanPlanner();
+
+            var shortTermMemory = new ShortTermMemory();
+
+            var agent = new Agent(new OpenAIAssistantClient(), planning: noPlanPlanner, shortTermMemory: shortTermMemory)
+            {
+                Role = config.AgentConfigs[0].Role,
+                Mission = config.AgentConfigs[0].Mission,
+            };
+
+            return agent;
+        } 
 
         static string Query()
         {

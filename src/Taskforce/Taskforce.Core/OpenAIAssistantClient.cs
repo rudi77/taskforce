@@ -63,6 +63,7 @@ namespace Taskforce.Core
         public override async Task<object?> SendMessageAsync(string systemPrompt, string userPrompt, IList<string> imageIds)
         {
             var assistantClient = _openAIClient.GetAssistantClient();
+            //var assistant = await assistantClient.CreateAssistantAsync("gpt-3.5-turbo", new AssistantCreationOptions { Instructions = systemPrompt });
             var assistant = await assistantClient.CreateAssistantAsync("gpt-4o-mini", new AssistantCreationOptions { Instructions = systemPrompt });
             var messageContentList = string.IsNullOrEmpty(userPrompt) 
                 ? new List<MessageContent>() 

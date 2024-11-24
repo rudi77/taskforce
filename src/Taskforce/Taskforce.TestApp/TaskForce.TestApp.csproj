@@ -7,10 +7,4 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\Taskforce.Abstractions\Taskforce.Abstractions.csproj" />
-    <ProjectReference Include="..\Taskforce.Configuration\Taskforce.Configuration.csproj" />
-    <ProjectReference Include="..\Taskforce.Core\Taskforce.Core.csproj" />
-  </ItemGroup>
-
 </Project>

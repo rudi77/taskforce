@@ -11,9 +11,4 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\Taskforce.Abstractions\Taskforce.Abstractions.csproj" />
-    <ProjectReference Include="..\Taskforce.Configuration\Taskforce.Configuration.csproj" />
-  </ItemGroup>
-
 </Project>

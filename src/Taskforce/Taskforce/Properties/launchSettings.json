@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Taskforce": {
+      "commandName": "Project"
+    },
+    "Container (Dockerfile)": {
+      "commandName": "Docker"
+    }
+  }
+}

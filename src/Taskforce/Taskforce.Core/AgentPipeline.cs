@@ -20,7 +20,16 @@
 
             foreach (var agent in _agents)
             {
-                intermediateResult = await agent.ExecuteAsync(userPrompt, intermediateResult, images);
+                if (agent.WithVision)
+                {
+                    intermediateResult = await agent.ExecuteAsync(userPrompt, intermediateResult, images);
+                }
+                else
+                {
+                    intermediateResult = await agent.ExecuteAsync(userPrompt, intermediateResult);
+                }
+
+                await Console.Out.WriteColorConsoleAsync(intermediateResult, ConsoleColor.DarkGreen);
             }
 
             return intermediateResult;

@@ -5,11 +5,11 @@ namespace Taskforce.Core
 {
     public class Planner : IPlanning
     {
-        private readonly ILLM _llm;
+        private readonly IChatCompletion _llm;
         private IPlanningStrategy _planningStrategy;
         private readonly PlanningConfig _config;
 
-        public Planner(ILLM llm, IPlanningStrategy planningStrategy, PlanningConfig config)
+        public Planner(IChatCompletion llm, IPlanningStrategy planningStrategy, PlanningConfig config)
         {
             _llm = llm ?? throw new ArgumentNullException(nameof(llm));
             _planningStrategy = planningStrategy;
@@ -31,10 +31,10 @@ namespace Taskforce.Core
             return await _planningStrategy.PlanAsync(userPrompt, _llm, GeneralInstruction, AnswerInstruction);
         }
 
-        public async Task<List<string>> PlanAsync(string userPrompt, IList<string> imagePaths)
+        public async Task<List<string>> PlanAsync(string userPrompt, IList<byte[]> images)
         {
             await Console.Out.WritePlannerLineAsync("Planner starts planning...");
-            return await _planningStrategy.PlanAsync(userPrompt, imagePaths, _llm, GeneralInstruction, AnswerInstruction);
+            return await _planningStrategy.PlanAsync(userPrompt, images, _llm, GeneralInstruction, AnswerInstruction);
         }
     }
 }

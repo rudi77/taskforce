@@ -9,7 +9,7 @@ namespace Taskforce.Core
             return new List<string>();
         }
 
-        public async Task<List<string>> PlanAsync(string userPrompt, IList<string> imagePaths)
+        public async Task<List<string>> PlanAsync(string userPrompt, IList<byte[]> images)
         {
             return new List<string>();
         }

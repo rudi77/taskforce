@@ -3,7 +3,7 @@
     /// <summary>
     /// Interacts with a language model to process text
     /// </summary>
-    public interface ILLM
+    public interface IChatCompletion
     {
         /// <summary>
         /// Sends a prompt to an LLM
@@ -18,8 +18,8 @@
         /// </summary>
         /// <param name="systemPrompt"></param>
         /// <param name="userPrompt"></param>
-        /// <param name="fileIds">A list of files which were previously uploaded</param>
+        /// <param name="images">A list of images to be included into the chat</param>
         /// <returns></returns>
-        Task<object?> SendMessageAsync(string systemPrompt, string userPrompt, IList<string> fileIds);
+        Task<object?> SendMessageAsync(string systemPrompt, string userPrompt, IList<byte[]> images);
     }
 }

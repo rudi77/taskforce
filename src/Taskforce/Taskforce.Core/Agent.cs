@@ -45,6 +45,11 @@ namespace Taskforce.Core
         /// </summary>
         public string Mission => _config.Mission;
 
+        /// <summary>
+        /// The agent's vision capability
+        /// </summary>
+        public bool WithVision => _config.WithVision;
+
 
         /// <summary>
         /// The agent executes its mission

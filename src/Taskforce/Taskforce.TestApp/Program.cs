@@ -17,7 +17,7 @@ internal class Program
             new OpenAIChatClient(),
             new ChainOfThoughtStrategy(),
             config.PlanningConfig);
-        var agent2 = CreateAgent(config.PlanningConfig, config.AgentConfigs[1], planner);
+        var agent2 = CreateAgent(config.PlanningConfig, config.AgentConfigs[1], new NoPlanPlanner());
 
         var pipeline = new AgentPipeline();
         pipeline.AddAgent(agent1);

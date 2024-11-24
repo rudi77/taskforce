@@ -77,23 +77,20 @@ namespace Taskforce.Core
         /// </summary>
         /// <param name="userPrompt"></param>
         /// <param name="content"></param>
-        /// <param name="imagePaths">Files to be uploaded</param>
+        /// <param name="images">Files to be uploaded</param>
         /// <returns></returns>
-        public async Task<string> ExecuteAsync(string userPrompt, string content, IList<string> imagePaths)
+        public async Task<string> ExecuteAsync(string userPrompt, string content, IList<byte[]> images)
         {
             await Console.Out.WriteAgentLineAsync($"Agent: '{Name}' starts....");
             var systemPrompt = GetSystemPrompt();
             var instructPrompt = GetInstructPrompt(userPrompt, content);
 
-            // Upload images           
-            var imageIds = await _llm.UploadFieAsync(imagePaths);
-
             // Plan the task.
-            var planningResponse = await _planning.PlanAsync(instructPrompt);
+            var planningResponse = await _planning.PlanAsync(instructPrompt, images);
 
             if (planningResponse.Any())
             {
-                await ExecuteSubQueriesAsync(content, imageIds, planningResponse);
+                await ExecuteSubQueriesAsync(content, images, planningResponse);
             }
             
             _shortTermMemory.Store(instructPrompt);
@@ -101,7 +98,7 @@ namespace Taskforce.Core
             var context = _shortTermMemory.Get();
 
             // Get final answer
-            var response = await _llm.SendMessageAsync(systemPrompt, context, imageIds);
+            var response = await _llm.SendMessageAsync(systemPrompt, context, images);
 
             return response.ToString();
         }
@@ -129,7 +126,7 @@ namespace Taskforce.Core
             }
         }
 
-        private async Task ExecuteSubQueriesAsync(string content, IList<string> fileIds, List<string> planningResponse)
+        private async Task ExecuteSubQueriesAsync(string content, IList<byte[]> images, List<string> planningResponse)
         {
             // Execute provided sub tasks/questions from Planner
             var subQuestionAnswer = new StringBuilder();
@@ -140,7 +137,7 @@ namespace Taskforce.Core
                     _shortTermMemory.Store($"{subquestion}");
                     await Console.Out.WritePlannerLineAsync("Sub-Question:\n" + subquestion + "\n");
 
-                    var subResponse = await _llm.SendMessageAsync(Role, GetInstructPrompt(subquestion, content), fileIds);
+                    var subResponse = await _llm.SendMessageAsync(Role, GetInstructPrompt(subquestion, content), images);
                     _shortTermMemory.Store(subResponse.ToString());
 
                     await Console.Out.WriteAgentLineAsync("Sub-Response:\n" + subResponse.ToString() + "\n\n");

@@ -14,13 +14,13 @@
             _agents.Add(agent);
         }
 
-        public async Task<string> ExecuteAsync(string userPrompt, string content, List<string> imagePaths)
+        public async Task<string> ExecuteAsync(string userPrompt, string content, List<byte[]> images)
         {
             string intermediateResult = content;
 
             foreach (var agent in _agents)
             {
-                intermediateResult = await agent.ExecuteAsync(userPrompt, intermediateResult, imagePaths);
+                intermediateResult = await agent.ExecuteAsync(userPrompt, intermediateResult, images);
             }
 
             return intermediateResult;

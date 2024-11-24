@@ -72,5 +72,6 @@ PlanningConfig:
         ANSWERT FORMAT
         Please return the sub questions in the following json format.
         Remember to STRICTLY adhere to the below mentioned JSON structure and provide NO additional context or explanation.
+        Do not return the json in a json code block.
 
         {"sub-question": ["<FILL>"]}

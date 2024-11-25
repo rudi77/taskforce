@@ -1,4 +1,7 @@
-﻿namespace Taskforce.Core
+﻿using Taskforce.Domain.Entities;
+using Taskforce.Infrastructure.Observability;
+
+namespace Taskforce.Application
 {
     public class AgentPipeline
     {

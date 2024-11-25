@@ -1,4 +1,4 @@
-﻿namespace Taskforce.Core
+﻿namespace Taskforce.Infrastructure.Observability
 {
     public static class Extensions
     {

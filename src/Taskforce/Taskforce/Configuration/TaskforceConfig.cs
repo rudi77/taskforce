@@ -1,4 +1,5 @@
-﻿using YamlDotNet.Serialization;
+﻿using Taskforce.Domain.Entities;
+using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
 namespace Taskforce.Configuration

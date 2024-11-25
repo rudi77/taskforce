@@ -1,4 +1,4 @@
-﻿namespace Taskforce.Configuration
+﻿namespace Taskforce.Domain.Entities
 {
     public class PlanningConfig
     {

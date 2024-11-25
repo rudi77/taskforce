@@ -1,7 +1,8 @@
-﻿using Taskforce.Abstractions;
-using Taskforce.Configuration;
+﻿using Taskforce.Domain.Entities;
+using Taskforce.Domain.Interfaces;
+using Taskforce.Infrastructure.Observability;
 
-namespace Taskforce.Core
+namespace Taskforce.Domain.Services
 {
     public class Planner : IPlanning
     {

@@ -1,6 +1,7 @@
-﻿using Taskforce.Abstractions;
+﻿using Taskforce.Domain.Interfaces;
+using Taskforce.Infrastructure.Observability;
 
-namespace Taskforce.Core
+namespace Taskforce.Domain.Services
 {
     /// <summary>
     /// Stores intermediate results during data processing. 
@@ -18,12 +19,12 @@ namespace Taskforce.Core
 
         public void Clear()
         {
-            _memory.Clear();  
+            _memory.Clear();
         }
 
         public string Get()
         {
-            return _memory.Aggregate((a,b) => a + "\n" + b);
+            return _memory.Aggregate((a, b) => a + "\n" + b);
         }
 
         public void Store(string data)

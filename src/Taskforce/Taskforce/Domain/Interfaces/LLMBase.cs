@@ -1,4 +1,4 @@
-﻿namespace Taskforce.Abstractions
+﻿namespace Taskforce.Domain.Interfaces
 {
     public abstract class LLMBase : IChatCompletion
     {

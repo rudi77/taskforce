@@ -1,4 +1,4 @@
-﻿namespace Taskforce.Abstractions
+﻿namespace Taskforce.Domain.Interfaces
 {
     /// <summary>
     /// Interacts with a language model to process text

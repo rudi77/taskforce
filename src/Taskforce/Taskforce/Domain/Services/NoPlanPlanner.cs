@@ -1,6 +1,6 @@
-﻿using Taskforce.Abstractions;
+﻿using Taskforce.Domain.Interfaces;
 
-namespace Taskforce.Core
+namespace Taskforce.Domain.Services
 {
     public class NoPlanPlanner : IPlanning
     {

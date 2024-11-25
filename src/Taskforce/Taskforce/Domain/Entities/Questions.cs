@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json;
 
-namespace Taskforce.Core
+namespace Taskforce.Domain.Entities
 {
     internal class Questions
     {

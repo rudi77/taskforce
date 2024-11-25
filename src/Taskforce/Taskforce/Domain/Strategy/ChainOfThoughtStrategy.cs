@@ -1,6 +1,7 @@
-﻿using Taskforce.Abstractions;
+﻿using Taskforce.Domain.Entities;
+using Taskforce.Domain.Interfaces;
 
-namespace Taskforce.Core.Strategy
+namespace Taskforce.Domain.Strategy
 {
     public class ChainOfThoughtStrategy : IPlanningStrategy
     {

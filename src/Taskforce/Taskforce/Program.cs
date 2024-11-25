@@ -1,8 +1,10 @@
-﻿using Taskforce.Abstractions;
+﻿using Taskforce.Application;
 using Taskforce.Configuration;
-using Taskforce.Core;
-using Taskforce.Core.OpenAI;
-using Taskforce.Core.Strategy;
+using Taskforce.Domain.Entities;
+using Taskforce.Domain.Interfaces;
+using Taskforce.Domain.Services;
+using Taskforce.Domain.Strategy;
+using Taskforce.Infrastructure.LLM;
 
 internal class Program
 {
@@ -10,7 +12,7 @@ internal class Program
     {
         var receipts = new List<string> { @"C:\Users\rudi\Documents\Arbeit\CSS\297657.png" };
         List<byte[]> receipts_bytes = receipts.Select(File.ReadAllBytes).ToList();
-        var config = TaskforceConfig.Create("./sample/taskforce_receipt.yaml");
+        var config = TaskforceConfig.Create("./Configuration/sample/taskforce_receipt.yaml");
         var agent1 = CreateAgent(config.PlanningConfig, config.AgentConfigs[0], new NoPlanPlanner());
 
         var planner = new Planner(

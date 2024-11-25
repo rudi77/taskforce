@@ -1,8 +1,8 @@
 ﻿using System.Text;
-using Taskforce.Abstractions;
-using Taskforce.Configuration;
+using Taskforce.Domain.Interfaces;
+using Taskforce.Infrastructure.Observability;
 
-namespace Taskforce.Core
+namespace Taskforce.Domain.Entities
 {
     /// <summary>
     /// An Agent manages the main workflow including planning, memory management, LLM
@@ -19,12 +19,12 @@ namespace Taskforce.Core
         private readonly IList<ITool> _tools;
         private readonly AgentConfig _config;
 
-        public Agent(LLMBase illm, IMemory shortTermMemory, IPlanning planning, AgentConfig config, IMemory longTermMemory=null,  IList<ITool> tools=null)
+        public Agent(LLMBase illm, IMemory shortTermMemory, IPlanning planning, AgentConfig config, IMemory longTermMemory = null, IList<ITool> tools = null)
         {
             _llm = illm ?? throw new ArgumentNullException(nameof(illm));
-            _shortTermMemory = shortTermMemory ?? throw new ArgumentNullException(nameof(shortTermMemory));            
+            _shortTermMemory = shortTermMemory ?? throw new ArgumentNullException(nameof(shortTermMemory));
             _planning = planning ?? throw new ArgumentNullException(nameof(planning));
-            _config =  config ?? throw new ArgumentNullException(nameof(config));
+            _config = config ?? throw new ArgumentNullException(nameof(config));
 
             //_longTermMemory = longTermMemory ?? throw new ArgumentNullException(nameof(longTermMemory));
             //_tools = tools ?? throw new ArgumentNullException(nameof(tools));
@@ -58,7 +58,7 @@ namespace Taskforce.Core
         /// <param name="content">The content to be processed</param>
         /// <returns>The mission's output</returns>
         public async Task<string> ExecuteAsync(string userPrompt, string content)
-        {           
+        {
             await Console.Out.WriteAgentLineAsync($"Agent: '{Name}' starts....");
             var systemPrompt = GetSystemPrompt();
             var instructPrompt = GetInstructPrompt(userPrompt, content);
@@ -67,7 +67,7 @@ namespace Taskforce.Core
             var planningResponse = await _planning.PlanAsync(instructPrompt);
 
             await ExecuteSubQueriesAsync(content, planningResponse);
-            
+
             _shortTermMemory.Store(instructPrompt);
             var context = _shortTermMemory.Get();
 
@@ -97,7 +97,7 @@ namespace Taskforce.Core
             {
                 await ExecuteSubQueriesAsync(content, images, planningResponse);
             }
-            
+
             _shortTermMemory.Store(instructPrompt);
 
             var context = _shortTermMemory.Get();
@@ -157,7 +157,7 @@ namespace Taskforce.Core
             return Role + "\n" + Mission;
         }
 
-        private string GetInstructPrompt(string userPrompt, string content) 
+        private string GetInstructPrompt(string userPrompt, string content)
         {
             return userPrompt + "\n" + content;
         }

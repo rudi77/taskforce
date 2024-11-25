@@ -3,9 +3,9 @@
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using System.Runtime.CompilerServices;
-using Taskforce.Abstractions;
+using Taskforce.Domain.Interfaces;
 
-namespace Taskforce.Core.OpenAI
+namespace Taskforce.Infrastructure.LLM
 {
     public class OpenAIChatClient : LLMBase
     {
@@ -78,7 +78,7 @@ namespace Taskforce.Core.OpenAI
                 {
                     Role = AuthorRole.System,
                     Items = [
-                        new TextContent { Text = systemPrompt },                        
+                        new TextContent { Text = systemPrompt },
                     ]
                 }
             );

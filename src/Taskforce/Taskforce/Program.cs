@@ -3,7 +3,6 @@ using Taskforce.Configuration;
 using Taskforce.Domain.Entities;
 using Taskforce.Domain.Interfaces;
 using Taskforce.Domain.Services;
-using Taskforce.Domain.Strategy;
 using Taskforce.Infrastructure.LLM;
 
 internal class Program
@@ -13,13 +12,14 @@ internal class Program
         var receipts = new List<string> { @"C:\Users\rudi\Documents\Arbeit\CSS\297657.png" };
         List<byte[]> receipts_bytes = receipts.Select(File.ReadAllBytes).ToList();
         var config = TaskforceConfig.Create("./Configuration/sample/taskforce_receipt.yaml");
-        var agent1 = CreateAgent(config.PlanningConfig, config.AgentConfigs[0], new NoPlanPlanner());
 
         var planner = new Planner(
             new OpenAIChatClient(),
-            new ChainOfThoughtStrategy(),
+            new NoPlanningStrategy(), //ChainOfThoughtStrategy(),
             config.PlanningConfig);
-        var agent2 = CreateAgent(config.PlanningConfig, config.AgentConfigs[1], new NoPlanPlanner());
+
+        var agent1 = CreateAgent(config.PlanningConfig, config.AgentConfigs[0], planner);
+        var agent2 = CreateAgent(config.PlanningConfig, config.AgentConfigs[1], planner);
 
         var pipeline = new AgentPipeline();
         pipeline.AddAgent(agent1);
@@ -28,7 +28,6 @@ internal class Program
         //var response = await pipeline.ExecuteAsync(Query(), Content(), receipts_bytes);
         var response = await pipeline.ExecuteAsync(Query(), "", receipts_bytes);
         await Console.Out.WriteLineAsync("Final response:\n" + response);
-
     }
 
     static Agent CreateAgent(PlanningConfig planningConfig, AgentConfig agentConfig, IPlanning planner)

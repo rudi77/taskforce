@@ -1,5 +1,7 @@
-﻿using Taskforce.Application;
+﻿using Microsoft.Extensions.Logging;
+using Taskforce.Application;
 using Taskforce.Configuration;
+using Taskforce.Core.Entities;
 using Taskforce.Domain.Entities;
 using Taskforce.Domain.Interfaces;
 using Taskforce.Domain.Services;
@@ -7,8 +9,18 @@ using Taskforce.Infrastructure.LLM;
 
 internal class Program
 {
+    private static readonly ILoggerFactory LoggerFactory = Microsoft.Extensions.Logging.LoggerFactory.Create(builder =>
+    {
+        builder.AddConsole(); // Adds the console logger
+    });
+
     static async Task Main(string[] args)
     {
+        var logger = LoggerFactory.CreateLogger("Program");
+        logger.LogInformation("Application starting...");
+
+        // Examp
+
         var receipts = new List<string> { @"C:\Users\rudi\Documents\Arbeit\CSS\297657.png" };
         List<byte[]> receipts_bytes = receipts.Select(File.ReadAllBytes).ToList();
         var config = TaskforceConfig.Create("./Configuration/sample/taskforce_receipt.yaml");
@@ -34,10 +46,12 @@ internal class Program
     {
         var shortTermMemory = new ShortTermMemory();
         var agent = new Agent(
-            new OpenAIChatClient(),
-            shortTermMemory: shortTermMemory,
+            llm: new OpenAIChatClient(),
             planning: planner,
-            config: agentConfig);
+            config: agentConfig,
+            memoryManager: new MemoryManager(shortTermMemory),
+            promptBuilder: new PromptBuilder(agentConfig),
+            LoggerFactory.CreateLogger("Agent"));
 
         return agent;
     }

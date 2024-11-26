@@ -9,7 +9,9 @@ namespace Taskforce.Domain.Strategy
         {
             var questionAnswerPromptPart = $"USER QUESTION\n{userPrompt}\n{answerInstruction}";
             var response = await llm.SendMessageAsync(generalInstruction, questionAnswerPromptPart);
-            var questions = Newtonsoft.Json.JsonConvert.DeserializeObject<Questions>(response.ToString());
+            var questions = Newtonsoft.Json.JsonConvert.DeserializeObject<Questions>(response.ToString()) ?? new Questions();
+
+            questions.SubQuestions.Add(userPrompt);
 
             return questions.SubQuestions;
         }
@@ -18,7 +20,9 @@ namespace Taskforce.Domain.Strategy
         {
             var questionAnswerPromptPart = $"USER QUESTION\n{userPrompt}\n{answerInstruction}";
             var response = await llm.SendMessageAsync(generalInstruction, questionAnswerPromptPart, images);
-            var questions = Newtonsoft.Json.JsonConvert.DeserializeObject<Questions>(response.ToString());
+            var questions = Newtonsoft.Json.JsonConvert.DeserializeObject<Questions>(response.ToString()) ?? new Questions();
+
+            questions.SubQuestions.Add(userPrompt);
 
             return questions.SubQuestions;
         }

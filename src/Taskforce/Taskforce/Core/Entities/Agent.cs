@@ -1,165 +1,96 @@
-﻿using System.Text;
+﻿using Microsoft.Extensions.Logging;
+using System.Buffers;
+using System.Text;
+using Taskforce.Core.Entities;
 using Taskforce.Domain.Interfaces;
 using Taskforce.Infrastructure.Observability;
 
 namespace Taskforce.Domain.Entities
 {
-    /// <summary>
-    /// An Agent manages the main workflow including planning, memory management, LLM
-    /// interaction and tool execution.
-    /// An Agent has a certain mission, described in a prompt. The agent always tries to
-    /// successfully
-    /// </summary>
     public class Agent
     {
         private readonly LLMBase _llm;
-        private readonly IMemory _shortTermMemory;
-        private readonly IMemory _longTermMemory;
         private readonly IPlanning _planning;
-        private readonly IList<ITool> _tools;
-        private readonly AgentConfig _config;
+        private readonly MemoryManager _memoryManager;
+        private readonly ILogger _logger;
+        private readonly PromptBuilder _promptBuilder;
 
-        public Agent(LLMBase illm, IMemory shortTermMemory, IPlanning planning, AgentConfig config, IMemory longTermMemory = null, IList<ITool> tools = null)
+        public string Name { get; }
+        public string Role { get; }
+        public string Mission { get; }
+        public bool WithVision { get; }
+
+        public Agent(LLMBase llm, IPlanning planning, AgentConfig config, MemoryManager memoryManager, PromptBuilder promptBuilder, ILogger logger)
         {
-            _llm = illm ?? throw new ArgumentNullException(nameof(illm));
-            _shortTermMemory = shortTermMemory ?? throw new ArgumentNullException(nameof(shortTermMemory));
+            _llm = llm ?? throw new ArgumentNullException(nameof(llm));
             _planning = planning ?? throw new ArgumentNullException(nameof(planning));
-            _config = config ?? throw new ArgumentNullException(nameof(config));
+            _memoryManager = memoryManager ?? throw new ArgumentNullException(nameof(memoryManager));
+            _promptBuilder = promptBuilder ?? throw new ArgumentNullException(nameof(promptBuilder));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-            //_longTermMemory = longTermMemory ?? throw new ArgumentNullException(nameof(longTermMemory));
-            //_tools = tools ?? throw new ArgumentNullException(nameof(tools));
+            Name = config.Name;
+            Role = config.Role;
+            Mission = config.Mission;
+            WithVision = config.WithVision;
         }
 
         /// <summary>
-        /// The Agent's name
+        /// Executes the mission by planning and executing steps.
         /// </summary>
-        public string Name => _config.Name;
-
-        /// <summary>
-        /// Describes the role of an agent.
-        /// </summary>
-        public string Role => _config.Role;
-
-        /// <summary>
-        /// The agent's mission. 
-        /// </summary>
-        public string Mission => _config.Mission;
-
-        /// <summary>
-        /// The agent's vision capability
-        /// </summary>
-        public bool WithVision => _config.WithVision;
-
-
-        /// <summary>
-        /// The agent executes its mission
-        /// </summary>
-        /// <param name="userPrompt">Can be anything. From a question to an instruction etc.</param>
-        /// <param name="content">The content to be processed</param>
-        /// <returns>The mission's output</returns>
-        public async Task<string> ExecuteAsync(string userPrompt, string content)
+        public async Task<string> ExecuteMissionAsync(string userPrompt, string content, IList<byte[]> images = null)
         {
-            await Console.Out.WriteAgentLineAsync($"Agent: '{Name}' starts....");
-            var systemPrompt = GetSystemPrompt();
-            var instructPrompt = GetInstructPrompt(userPrompt, content);
+            _logger.LogInformation($"Agent '{Name}' is starting its mission: {Mission}");
 
-            // Plan the task.
-            var planningResponse = await _planning.PlanAsync(instructPrompt);
+            // Plan the mission steps
+            var plan = await PlanMissionAsync(userPrompt, content, images);
 
-            await ExecuteSubQueriesAsync(content, planningResponse);
+            // Execute each step and aggregate results
+            var finalResult = await ExecuteStepsAsync(plan, content, images);
 
-            _shortTermMemory.Store(instructPrompt);
-            var context = _shortTermMemory.Get();
-
-            // Get final answer
-            var response = await _llm.SendMessageAsync(systemPrompt, context);
-
-            return response.ToString();
+            _logger.LogInformation($"Agent '{Name}' completed its mission.");
+            return finalResult;
         }
 
-        /// <summary>
-        /// Agent executes its mission with vision support
-        /// </summary>
-        /// <param name="userPrompt"></param>
-        /// <param name="content"></param>
-        /// <param name="images">Files to be uploaded</param>
-        /// <returns></returns>
-        public async Task<string> ExecuteAsync(string userPrompt, string content, IList<byte[]> images)
+        private async Task<List<string>> PlanMissionAsync(string userPrompt, string content, IList<byte[]> images)
         {
-            await Console.Out.WriteAgentLineAsync($"Agent: '{Name}' starts....");
-            var systemPrompt = GetSystemPrompt();
-            var instructPrompt = GetInstructPrompt(userPrompt, content);
-
-            // Plan the task.
-            var planningResponse = await _planning.PlanAsync(instructPrompt, images);
-
-            if (planningResponse.Any())
+            try
             {
-                await ExecuteSubQueriesAsync(content, images, planningResponse);
+                return WithVision
+                    ? await _planning.PlanAsync(userPrompt, images)
+                    : await _planning.PlanAsync(userPrompt);
+                    
             }
-
-            _shortTermMemory.Store(instructPrompt);
-
-            var context = _shortTermMemory.Get();
-
-            // Get final answer
-            var response = await _llm.SendMessageAsync(systemPrompt, context, images);
-
-            return response.ToString();
-        }
-
-        private async Task ExecuteSubQueriesAsync(string content, List<string> planningResponse)
-        {
-            // Execute provided sub tasks/questions from Planner
-            var subQuestionAnswer = new StringBuilder();
-            if (planningResponse != null && planningResponse.Any())
+            catch (Exception ex)
             {
-                foreach (var subquestion in planningResponse)
-                {
-                    _shortTermMemory.Store($"{subquestion}");
-
-                    await Console.Out.WritePlannerLineAsync("Sub-Question:\n" + subquestion + "\n");
-
-                    var subResponse = await _llm.SendMessageAsync(subquestion, content);
-
-                    _shortTermMemory.Store(subResponse.ToString());
-
-                    await Console.Out.WriteAgentLineAsync("Sub-Response:\n" + subResponse.ToString() + "\n\n");
-
-                    subQuestionAnswer.AppendLine(subquestion).AppendLine(subResponse.ToString());
-                }
+                _logger.LogError($"Error while planning mission: {ex.Message}", ex);
+                throw;
             }
         }
 
-        private async Task ExecuteSubQueriesAsync(string content, IList<byte[]> images, List<string> planningResponse)
+        private async Task<string> ExecuteStepsAsync(List<string> steps, string content, IList<byte[]> images)
         {
-            // Execute provided sub tasks/questions from Planner
-            var subQuestionAnswer = new StringBuilder();
-            if (planningResponse != null && planningResponse.Any())
+            var results = new StringBuilder();
+            var systemPrompt = _promptBuilder.BuildSystemPrompt();
+
+            foreach (var step in steps)
             {
-                foreach (var subquestion in planningResponse)
-                {
-                    _shortTermMemory.Store($"{subquestion}");
-                    await Console.Out.WritePlannerLineAsync("Sub-Question:\n" + subquestion + "\n");
+                _memoryManager.Store(step);
+                _logger.LogDebug($"Executing step: {step}");
+                var instructPrompt = _promptBuilder.BuildInstructionPrompt(step, content);
 
-                    var subResponse = await _llm.SendMessageAsync(Role, GetInstructPrompt(subquestion, content), images);
-                    _shortTermMemory.Store(subResponse.ToString());
+                var response = WithVision
+                    ? await _llm.SendMessageAsync(systemPrompt, instructPrompt, images)
+                    : await _llm.SendMessageAsync(systemPrompt, instructPrompt);
+                    
 
-                    await Console.Out.WriteAgentLineAsync("Sub-Response:\n" + subResponse.ToString() + "\n\n");
+                _memoryManager.Store(response.ToString());
+                results.AppendLine(response.ToString());
 
-                    subQuestionAnswer.AppendLine(subquestion).AppendLine(subResponse.ToString());
-                }
+                _logger.LogDebug($"Step result: {response}");
             }
-        }
 
-        private string GetSystemPrompt()
-        {
-            return Role + "\n" + Mission;
-        }
-
-        private string GetInstructPrompt(string userPrompt, string content)
-        {
-            return userPrompt + "\n" + content;
+            return results.ToString();
         }
     }
+
 }

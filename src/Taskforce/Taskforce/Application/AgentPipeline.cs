@@ -23,16 +23,8 @@ namespace Taskforce.Application
 
             foreach (var agent in _agents)
             {
-                if (agent.WithVision)
-                {
-                    intermediateResult = await agent.ExecuteAsync(userPrompt, intermediateResult, images);
-                }
-                else
-                {
-                    intermediateResult = await agent.ExecuteAsync(userPrompt, intermediateResult);
-                }
-
-                await Console.Out.WriteColorConsoleAsync(intermediateResult, ConsoleColor.DarkGreen);
+                intermediateResult = await agent.ExecuteMissionAsync(userPrompt, intermediateResult, images);
+                                await Console.Out.WriteColorConsoleAsync(intermediateResult, ConsoleColor.DarkGreen);
             }
 
             return intermediateResult;

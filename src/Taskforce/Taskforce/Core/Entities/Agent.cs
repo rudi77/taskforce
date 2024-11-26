@@ -45,9 +45,10 @@ namespace Taskforce.Domain.Entities
             var plan = await PlanMissionAsync(userPrompt, content, images);
 
             // Execute each step and aggregate results
-            var finalResult = await ExecuteStepsAsync(plan, content, images);
+            var finalResult = await ExecutePlanyAsync(plan, content, images);
 
             _logger.LogInformation($"Agent '{Name}' completed its mission.");
+
             return finalResult;
         }
 
@@ -67,12 +68,12 @@ namespace Taskforce.Domain.Entities
             }
         }
 
-        private async Task<string> ExecuteStepsAsync(List<string> steps, string content, IList<byte[]> images)
+        private async Task<string> ExecutePlanyAsync(List<string> plan, string content, IList<byte[]> images)
         {
             var results = new StringBuilder();
             var systemPrompt = _promptBuilder.BuildSystemPrompt();
 
-            foreach (var step in steps)
+            foreach (var step in plan)
             {
                 _memoryManager.Store(step);
                 _logger.LogDebug($"Executing step: {step}");

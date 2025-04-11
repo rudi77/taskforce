@@ -1,9 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
-using System.Buffers;
 using System.Text;
 using Taskforce.Core.Entities;
 using Taskforce.Domain.Interfaces;
-using Taskforce.Infrastructure.Observability;
 
 namespace Taskforce.Domain.Entities
 {
@@ -19,6 +17,7 @@ namespace Taskforce.Domain.Entities
         public string Role { get; }
         public string Mission { get; }
         public bool WithVision { get; }
+        public string Query { get; }
 
         public Agent(LLMBase llm, IPlanning planning, AgentConfig config, MemoryManager memoryManager, PromptBuilder promptBuilder, ILogger logger)
         {
@@ -32,6 +31,7 @@ namespace Taskforce.Domain.Entities
             Role = config.Role;
             Mission = config.Mission;
             WithVision = config.WithVision;
+            Query = config.Query;
         }
 
         /// <summary>
@@ -43,6 +43,11 @@ namespace Taskforce.Domain.Entities
 
             // Plan the mission steps
             var plan = await PlanMissionAsync(userPrompt, content, images);
+
+            foreach (var step in plan)
+            {
+                _logger.LogInformation($"Planned step: {step}");
+            }
 
             // Execute each step and aggregate results
             var finalResult = await ExecutePlanyAsync(plan, content, images);

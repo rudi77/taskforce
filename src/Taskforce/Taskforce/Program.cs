@@ -5,6 +5,7 @@ using Taskforce.Core.Entities;
 using Taskforce.Domain.Entities;
 using Taskforce.Domain.Interfaces;
 using Taskforce.Domain.Services;
+using Taskforce.Domain.Strategy;
 using Taskforce.Infrastructure.LLM;
 
 internal class Program
@@ -21,24 +22,31 @@ internal class Program
 
         // Examp
 
+        //var receipts = new List<string> { @"C:\Users\rudi\Documents\Arbeit\CSS\297657.png" };
+
+        //var receipts = new List<string> { @"C:\Users\rudi\Documents\Arbeit\CSS\297595.jpeg.png" };
+        //297657.png
         var receipts = new List<string> { @"C:\Users\rudi\Documents\Arbeit\CSS\297657.png" };
+
         List<byte[]> receipts_bytes = receipts.Select(File.ReadAllBytes).ToList();
-        var config = TaskforceConfig.Create("./Configuration/sample/taskforce_receipt.yaml");
+        var config = TaskforceConfig.Create("./Configuration/sample/taskforce_synthetic_document_generation.yaml");
 
         var planner = new Planner(
             new OpenAIChatClient(),
-            new NoPlanningStrategy(), //ChainOfThoughtStrategy(),
+            new ChainOfThoughtStrategy(), // NoPlanningStrategy(), //,
             config.PlanningConfig);
 
         var agent1 = CreateAgent(config.PlanningConfig, config.AgentConfigs[0], planner);
         var agent2 = CreateAgent(config.PlanningConfig, config.AgentConfigs[1], planner);
+        var agent3 = CreateAgent(config.PlanningConfig, config.AgentConfigs[2], planner);
 
         var pipeline = new AgentPipeline();
         pipeline.AddAgent(agent1);
         pipeline.AddAgent(agent2);
+        pipeline.AddAgent(agent3);
 
         //var response = await pipeline.ExecuteAsync(Query(), Content(), receipts_bytes);
-        var response = await pipeline.ExecuteAsync(Query(), "", receipts_bytes);
+        var response = await pipeline.ExecuteAsync("", receipts_bytes);
         await Console.Out.WriteLineAsync("Final response:\n" + response);
     }
 

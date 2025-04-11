@@ -17,14 +17,14 @@ namespace Taskforce.Application
             _agents.Add(agent);
         }
 
-        public async Task<string> ExecuteAsync(string userPrompt, string content, List<byte[]> images)
+        public async Task<string> ExecuteAsync(string content, List<byte[]> images)
         {
             string intermediateResult = content;
 
             foreach (var agent in _agents)
             {
-                intermediateResult = await agent.ExecuteMissionAsync(userPrompt, intermediateResult, images);
-                                await Console.Out.WriteColorConsoleAsync(intermediateResult, ConsoleColor.DarkGreen);
+                intermediateResult = await agent.ExecuteMissionAsync(agent.Query, intermediateResult, images);
+                await Console.Out.WriteColorConsoleAsync(intermediateResult, ConsoleColor.DarkGreen);
             }
 
             return intermediateResult;

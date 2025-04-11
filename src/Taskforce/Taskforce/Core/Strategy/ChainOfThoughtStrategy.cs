@@ -1,6 +1,9 @@
 ﻿using Taskforce.Domain.Entities;
 using Taskforce.Domain.Interfaces;
 
+//must be removed
+using Taskforce.Infrastructure.Observability;
+
 namespace Taskforce.Domain.Strategy
 {
     public class ChainOfThoughtStrategy : IPlanningStrategy
@@ -20,6 +23,10 @@ namespace Taskforce.Domain.Strategy
         {
             var questionAnswerPromptPart = $"USER QUESTION\n{userPrompt}\n{answerInstruction}";
             var response = await llm.SendMessageAsync(generalInstruction, questionAnswerPromptPart, images);
+
+
+            Console.Out.WritePlannerLineAsync(response.ToString());
+
             var questions = Newtonsoft.Json.JsonConvert.DeserializeObject<Questions>(response.ToString()) ?? new Questions();
 
             questions.SubQuestions.Add(userPrompt);

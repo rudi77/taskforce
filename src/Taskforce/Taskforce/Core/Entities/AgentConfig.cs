@@ -8,6 +8,8 @@
 
         public string Mission { get; set; } = string.Empty;
 
+        public string Query { get; set; } = string.Empty;
+
         public bool WithVision { get; set; } = false;
     }
 }

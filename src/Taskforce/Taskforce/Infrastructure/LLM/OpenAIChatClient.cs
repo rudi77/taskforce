@@ -20,11 +20,11 @@ namespace Taskforce.Infrastructure.LLM
         public OpenAIChatClient()
         {
             // read OpenAIApiKey from environment variable
-            var apiKey = Environment.GetEnvironmentVariable("OpenAIApiKey");
+            var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
 
             if (string.IsNullOrEmpty(apiKey))
             {
-                throw new InvalidOperationException("OpenAIApiKey not set as environment variable");
+                throw new InvalidOperationException("OPENAI_API_KEY not set as environment variable");
             }
 
             _kernel = BuildKernel("gpt-4o-mini", apiKey);

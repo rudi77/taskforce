@@ -1,11 +1,12 @@
 ﻿using Microsoft.Extensions.Logging;
 using Taskforce.Application;
 using Taskforce.Configuration;
+using Taskforce.Core.Agents;
 using Taskforce.Core.Entities;
+using Taskforce.Core.Interfaces;
+using Taskforce.Core.Services;
 using Taskforce.Domain.Entities;
 using Taskforce.Domain.Interfaces;
-using Taskforce.Domain.Services;
-using Taskforce.Domain.Strategy;
 using Taskforce.Infrastructure.LLM;
 
 internal class Program
@@ -20,153 +21,71 @@ internal class Program
         var logger = LoggerFactory.CreateLogger("Program");
         logger.LogInformation("Application starting...");
 
-        // Examp
-
-        //var receipts = new List<string> { @"C:\Users\rudi\Documents\Arbeit\CSS\297657.png" };
-
-        //var receipts = new List<string> { @"C:\Users\rudi\Documents\Arbeit\CSS\297595.jpeg.png" };
-        //297657.png
+        // Example receipt image path
         var receipts = new List<string> { @"C:\Users\rudi\Documents\Arbeit\CSS\297657.png" };
-
         List<byte[]> receipts_bytes = receipts.Select(File.ReadAllBytes).ToList();
-        var config = TaskforceConfig.Create("./Configuration/sample/taskforce_synthetic_document_generation.yaml");
+        
+        // Load configuration
+        var config = TaskforceConfig.Create("C:/Users/rudi/source/repos/taskforce/src/Taskforce/Taskforce/Configuration/sample/taskforce_receipt.yaml");
+        
+        // Create LLM client
+        var llmClient = new OpenAIChatClient();
+        
+        // Create tools for the agent
+        var tools = CreateTools();
+        
+        // Create both agents from the configuration
+        var markdownAgent = new ToolCallingAgent(
+            tools: tools,
+            model: llmClient,
+            systemPrompt: config.AgentConfigs[0].Mission, // Markdown agent
+            logger: LoggerFactory.CreateLogger("MarkdownAgent")
+        );
 
-        var planner = new Planner(
-            new OpenAIChatClient(),
-            new ChainOfThoughtStrategy(), // NoPlanningStrategy(), //,
-            config.PlanningConfig);
+        var extractionAgent = new ToolCallingAgent(
+            tools: tools,
+            model: llmClient,
+            systemPrompt: config.AgentConfigs[1].Mission, // Agent Smith
+            logger: LoggerFactory.CreateLogger("ExtractionAgent"),
+            isExtractionAgent: true
+        );
+        
+        // Execute both agents
+        logger.LogInformation("Running Markdown Agent...");
+        var markdownResponse = await markdownAgent.Run("Convert the uploaded invoice image into markdown format", receipts_bytes);
+        await Console.Out.WriteLineAsync("Markdown response:\n" + markdownResponse);
 
-        var agent1 = CreateAgent(config.PlanningConfig, config.AgentConfigs[0], planner);
-        var agent2 = CreateAgent(config.PlanningConfig, config.AgentConfigs[1], planner);
-        var agent3 = CreateAgent(config.PlanningConfig, config.AgentConfigs[2], planner);
-
-        var pipeline = new AgentPipeline();
-        pipeline.AddAgent(agent1);
-        pipeline.AddAgent(agent2);
-        pipeline.AddAgent(agent3);
-
-        //var response = await pipeline.ExecuteAsync(Query(), Content(), receipts_bytes);
-        var response = await pipeline.ExecuteAsync("", receipts_bytes);
-        await Console.Out.WriteLineAsync("Final response:\n" + response);
+        logger.LogInformation("Running Extraction Agent...");
+        var extractionResponse = await extractionAgent.Run($"Extract all relevant receipt details from the following markdown:\n\n{markdownResponse}");
+        await Console.Out.WriteLineAsync("\nExtraction response:\n" + extractionResponse);
     }
 
-    static Agent CreateAgent(PlanningConfig planningConfig, AgentConfig agentConfig, IPlanning planner)
+    static List<Tool> CreateTools()
     {
-        var shortTermMemory = new ShortTermMemory();
-        var agent = new Agent(
-            llm: new OpenAIChatClient(),
-            planning: planner,
-            config: agentConfig,
-            memoryManager: new MemoryManager(shortTermMemory),
-            promptBuilder: new PromptBuilder(agentConfig),
-            LoggerFactory.CreateLogger("Agent"));
-
-        return agent;
-    }
-
-    static string Query()
-    {
-        return "User: Extract all relevant receipt details from the uploaded receipt image";
-    }
-
-    static string Content()
-    {
-        return @"
-        ***
-        CITYHOTEL
-        Mir
-        KURFÜRST
-        t BALDUIN
-        GARNI
-        City Hotel Kurfürst Balduin GmbH  Hohenfelder Stoße 12  56068 Koblenz
-        CSS AG
-        Friedrich Dietz-Straße 1
-        36093 Künzell
-        CITY HOTEL
-        KURFÜRST BALDUIN
-        GMBH
-        Hohenfelder Straße 1z
-        56068 Koblenz
-        Telefon 0261-1332-0
-        Telefax 02 61-13 32-100
-        Datum:
-        Zimmer:
-        Anreise:
-        Abreise:
-        Steuer-Nr.:
-        Seite:
-        31.08.2023
-        407
-        30.08.2023
-        31.08.2023
-        11/22/650/1220/9
-        1/1
-        Internet:
-        www.cityhotel-koblenz.de
-        E-Mail:
-        info@cityhotel-koblenz.de
-        Rechnung
-        Rechnungsnummer 150513
-        Kassierer :Mallmann, Jutta
-        Herr Martin Waigand
-        Datum Beschreibung
-        Kredit ?
-        Debit ?
-        30.08.2023
-        30.08.2023
-        30.08.2023
-        31.08.2023
-        Garage Pauschale
-        Frühstück
-        Übernachtung
-        Mastercard
-        0,00
-        0,00
-        0,00
-        99,80
-        12,00
-        13,80
-        74,00
-        0,00
-        99,80
-        Gesamt
-        99,80
-        0,00 ?
-        Offener Saldo
-        Diese Rechnung enthält folgende MwSt. -Beträge:
-        Netto
-        78,19 E
-        13,56 E
-        MWST
-        5,47 E
-        2,58 E
-        Brutto
-        83,66 ?
-        16,14 ?
-        MWST
-        Tax 7 %
-        Tax 19 %
-        KassenSichV
-        Transaktion Beginn Transaktion Ende
-        Transaktionsnummer
-        Seriennummer TSE
-        22f7ac52dec415355d4a781795b50ad97 900326063
-        aefcea04cad35fe15c5b041Ib6e140c
-        31.08.2023 08:02:46 31.08.2023 08:02:47
-        Wir danken für Ihren Besuch und wünschen eine angenehme Heimreise.
-        Volksbank Koblenz
-        Mittelrhein e.G.
-        IBAN: DE63 5776 15911060 8o6o 00
-        BIC: GENODE3IK0B
-        Geschäftsführer: Steuer-Nr.
-        Bankverbindungen:
-        Sparkasse Koblenz
-        IBAN: DE86 5705 0120 0000 0047 47
-        BIC: MALADE51KOB
-        11/22/650/1220/9 REGION M11TELRHEIN
-        Hendrik Rooze
-        Amtsgericht Koblenz USt-ID Nr.
-        HRB 6431 DE 212 546 787
-        ";
+        // Create tools that the agent can use
+        return new List<Tool>
+        {
+            new Tool(
+                name: "extract_receipt_details",
+                description: "Extract details from a receipt image",
+                argumentType: typeof(string),
+                execute: async (args) =>
+                {
+                    // This is a placeholder implementation
+                    // In a real application, this would call an OCR service or similar
+                    return "Receipt details extracted successfully";
+                }
+            ),
+            new Tool(
+                name: "final_answer",
+                description: "Provide the final answer to the user",
+                argumentType: typeof(string),
+                execute: async (args) =>
+                {
+                    // This tool is used by the agent to provide the final answer
+                    return args.ToString();
+                }
+            )
+        };
     }
 }

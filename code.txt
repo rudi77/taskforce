@@ -1,0 +1,1279 @@
+
+// Relative Path: \src\Taskforce\Taskforce\Application\AgentPipeline.cs
+
+using Taskforce.Domain.Entities;
+using Taskforce.Infrastructure.Observability;
+
+namespace Taskforce.Application
+{
+    public class AgentPipeline
+    {
+        private readonly List<Agent> _agents;
+
+        public AgentPipeline()
+        {
+            _agents = new List<Agent>();
+        }
+
+        public void AddAgent(Agent agent)
+        {
+            _agents.Add(agent);
+        }
+
+        public async Task<string> ExecuteAsync(string content, List<byte[]> images)
+        {
+            string intermediateResult = content;
+
+            foreach (var agent in _agents)
+            {
+                intermediateResult = await agent.ExecuteMissionAsync(agent.Query, intermediateResult, images);
+                await Console.Out.WriteColorConsoleAsync(intermediateResult, ConsoleColor.DarkGreen);
+            }
+
+            return intermediateResult;
+        }
+    }
+}
+
+
+
+
+// Relative Path: \src\Taskforce\Taskforce\Configuration\TaskforceConfig.cs
+
+using Taskforce.Domain.Entities;
+using YamlDotNet.Serialization;
+using YamlDotNet.Serialization.NamingConventions;
+
+namespace Taskforce.Configuration
+{
+    public class TaskforceConfig
+    {
+        public List<AgentConfig> AgentConfigs { get; set; }
+
+        public PlanningConfig PlanningConfig { get; set; }
+
+        public static TaskforceConfig Create(string configFile)
+        {
+            if (!File.Exists(configFile))
+            { 
+                throw new FileNotFoundException(configFile);
+            }
+
+            var configContent = File.ReadAllText(configFile);
+            var deserializer = new DeserializerBuilder().Build();
+            var config = deserializer.Deserialize<TaskforceConfig>(configContent);
+
+            return config;
+        }
+    }
+}
+
+
+
+
+// Relative Path: \src\Taskforce\Taskforce\Core\Entities\Agent.cs
+
+using Microsoft.Extensions.Logging;
+using System.Text;
+using Taskforce.Core.Entities;
+using Taskforce.Domain.Interfaces;
+
+namespace Taskforce.Domain.Entities
+{
+    public class Agent
+    {
+        private readonly LLMBase _llm;
+        private readonly IPlanning _planning;
+        private readonly MemoryManager _memoryManager;
+        private readonly ILogger _logger;
+        private readonly PromptBuilder _promptBuilder;
+
+        public string Name { get; }
+        public string Role { get; }
+        public string Mission { get; }
+        public bool WithVision { get; }
+        public string Query { get; }
+
+        public Agent(LLMBase llm, IPlanning planning, AgentConfig config, MemoryManager memoryManager, PromptBuilder promptBuilder, ILogger logger)
+        {
+            _llm = llm ?? throw new ArgumentNullException(nameof(llm));
+            _planning = planning ?? throw new ArgumentNullException(nameof(planning));
+            _memoryManager = memoryManager ?? throw new ArgumentNullException(nameof(memoryManager));
+            _promptBuilder = promptBuilder ?? throw new ArgumentNullException(nameof(promptBuilder));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+
+            Name = config.Name;
+            Role = config.Role;
+            Mission = config.Mission;
+            WithVision = config.WithVision;
+            Query = config.Query;
+        }
+
+        /// <summary>
+        /// Executes the mission by planning and executing steps.
+        /// </summary>
+        public async Task<string> ExecuteMissionAsync(string userPrompt, string content, IList<byte[]> images = null)
+        {
+            _logger.LogInformation($"Agent '{Name}' is starting its mission: {Mission}");
+
+            // Plan the mission steps
+            var plan = await PlanMissionAsync(userPrompt, content, images);
+
+            foreach (var step in plan)
+            {
+                _logger.LogInformation($"Planned step: {step}");
+            }
+
+            // Execute each step and aggregate results
+            var finalResult = await ExecutePlanyAsync(plan, content, images);
+
+            _logger.LogInformation($"Agent '{Name}' completed its mission.");
+
+            return finalResult;
+        }
+
+        private async Task<List<string>> PlanMissionAsync(string userPrompt, string content, IList<byte[]> images)
+        {
+            try
+            {
+                return WithVision
+                    ? await _planning.PlanAsync(userPrompt, images)
+                    : await _planning.PlanAsync(userPrompt);
+                    
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error while planning mission: {ex.Message}", ex);
+                throw;
+            }
+        }
+
+        private async Task<string> ExecutePlanyAsync(List<string> plan, string content, IList<byte[]> images)
+        {
+            var results = new StringBuilder();
+            var systemPrompt = _promptBuilder.BuildSystemPrompt();
+
+            foreach (var step in plan)
+            {
+                _memoryManager.Store(step);
+                _logger.LogDebug($"Executing step: {step}");
+                var instructPrompt = _promptBuilder.BuildInstructionPrompt(step, content);
+
+                var response = WithVision
+                    ? await _llm.SendMessageAsync(systemPrompt, instructPrompt, images)
+                    : await _llm.SendMessageAsync(systemPrompt, instructPrompt);
+                    
+
+                _memoryManager.Store(response.ToString());
+                results.AppendLine(response.ToString());
+
+                _logger.LogDebug($"Step result: {response}");
+            }
+
+            return results.ToString();
+        }
+    }
+
+}
+
+
+
+
+// Relative Path: \src\Taskforce\Taskforce\Core\Entities\AgentConfig.cs
+
+namespace Taskforce.Domain.Entities
+{
+    public class AgentConfig
+    {
+        public string Name { get; set; } = string.Empty;
+
+        public string Role { get; set; } = string.Empty;
+
+        public string Mission { get; set; } = string.Empty;
+
+        public string Query { get; set; } = string.Empty;
+
+        public bool WithVision { get; set; } = false;
+    }
+}
+
+
+
+// Relative Path: \src\Taskforce\Taskforce\Core\Entities\MemoryManager.cs
+
+using Taskforce.Domain.Interfaces;
+
+namespace Taskforce.Core.Entities
+{
+    public class MemoryManager
+    {
+        private readonly IMemory _shortTermMemory;
+
+        public MemoryManager(IMemory shortTermMemory)
+        {
+            _shortTermMemory = shortTermMemory;
+        }
+
+        public void Store(string data)
+        {
+            _shortTermMemory.Store(data);
+        }
+
+        public string Retrieve()
+        {
+            return _shortTermMemory.Get();
+        }
+
+        public void Clear()
+        {
+            _shortTermMemory.Clear();
+        }
+    }
+
+}
+
+
+
+
+// Relative Path: \src\Taskforce\Taskforce\Core\Entities\MissionExecutor.cs
+
+using Taskforce.Domain.Interfaces;
+
+namespace Taskforce.Core.Entities
+{
+    public class MissionExecutor
+    {
+        private readonly IPlanning _planning;
+        private readonly LLMBase _llm;
+        private readonly MemoryManager _memoryManager;
+
+        public MissionExecutor(IPlanning planning, LLMBase llm, MemoryManager memoryManager)
+        {
+            _planning = planning;
+            _llm = llm;
+            _memoryManager = memoryManager;
+        }
+
+        public async Task<object?> ExecuteWithPlanningAsync(string instructionPrompt, string content, IList<byte[]> images = null)
+        {
+            var planningResponse = images == null
+                ? await _planning.PlanAsync(instructionPrompt)
+                : await _planning.PlanAsync(instructionPrompt, images);
+
+            foreach (var subTask in planningResponse)
+            {
+                _memoryManager.Store(subTask);
+                var subResponse = images == null
+                    ? await _llm.SendMessageAsync(subTask, content)
+                    : await _llm.SendMessageAsync(subTask, content, images);
+
+                _memoryManager.Store(subResponse.ToString());
+            }
+
+            var context = _memoryManager.Retrieve();
+            return images == null
+                ? await _llm.SendMessageAsync(instructionPrompt, context)
+                : await _llm.SendMessageAsync(instructionPrompt, context, images);
+        }
+    }
+
+}
+
+
+
+
+// Relative Path: \src\Taskforce\Taskforce\Core\Entities\PlanningConfig.cs
+
+namespace Taskforce.Domain.Entities
+{
+    public class PlanningConfig
+    {
+        public string GeneralInstruction { get; set; }
+
+        public string AnswerInstruction { get; set; }
+    }
+}
+
+
+
+
+// Relative Path: \src\Taskforce\Taskforce\Core\Entities\PromptBuilder.cs
+
+using Taskforce.Domain.Entities;
+
+namespace Taskforce.Core.Entities
+{
+    public class PromptBuilder
+    {
+        private readonly AgentConfig _config;
+
+        public PromptBuilder(AgentConfig config)
+        {
+            _config = config;
+        }
+
+        public string BuildSystemPrompt()
+        {
+            return $"{_config.Role}\n{_config.Mission}";
+        }
+
+        public string BuildInstructionPrompt(string userPrompt, string content)
+        {
+            return $"{userPrompt}\n{content}";
+        }
+    }
+
+}
+
+
+
+
+// Relative Path: \src\Taskforce\Taskforce\Core\Entities\Questions.cs
+
+using Newtonsoft.Json;
+
+namespace Taskforce.Domain.Entities
+{
+    internal class Questions
+    {
+        [JsonProperty("sub-question")]
+        public List<string> SubQuestions { get; set; }
+    }
+}
+
+
+
+
+// Relative Path: \src\Taskforce\Taskforce\Core\Interfaces\IChatCompletion.cs
+
+namespace Taskforce.Domain.Interfaces
+{
+    /// <summary>
+    /// Interacts with a language model to process text
+    /// </summary>
+    public interface IChatCompletion
+    {
+        /// <summary>
+        /// Sends a prompt to an LLM
+        /// </summary>
+        /// <param name="systemPrompt"></param>
+        /// <param name="userPrompt"></param>
+        /// <returns></returns>
+        Task<object?> SendMessageAsync(string systemPrompt, string userPrompt);
+
+        /// <summary>
+        /// Sends a prompt with images includes to an MMLM
+        /// </summary>
+        /// <param name="systemPrompt"></param>
+        /// <param name="userPrompt"></param>
+        /// <param name="images">A list of images to be included into the chat</param>
+        /// <returns></returns>
+        Task<object?> SendMessageAsync(string systemPrompt, string userPrompt, IList<byte[]> images);
+    }
+}
+
+
+
+// Relative Path: \src\Taskforce\Taskforce\Core\Interfaces\IMemory.cs
+
+namespace Taskforce.Domain.Interfaces
+{
+    /// <summary>
+    /// Store and search for information in a memory component
+    /// </summary>
+    public interface IMemory
+    {
+        void Store(string data);
+
+        string Get();
+
+        void Clear();
+    }
+}
+
+
+
+// Relative Path: \src\Taskforce\Taskforce\Core\Interfaces\IPlanning.cs
+
+namespace Taskforce.Domain.Interfaces
+{
+    public interface IPlanning
+    {
+        /// <summary>
+        /// Takes a user's question and tries to break it down it smaller pieces
+        /// </summary>
+        /// <param name="userPrompt"></param>
+        /// <returns></returns>
+        Task<List<string>> PlanAsync(string userPrompt);
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="userPrompt"></param>
+        /// <param name="images"></param>
+        /// <returns></returns>
+        Task<List<string>> PlanAsync(string userPrompt, IList<byte[]> images);
+    }
+}
+
+
+
+// Relative Path: \src\Taskforce\Taskforce\Core\Interfaces\IPlanningStrategycs.cs
+
+namespace Taskforce.Domain.Interfaces
+{
+    public interface IPlanningStrategy
+    {
+        Task<List<string>> PlanAsync(string userPrompt, IChatCompletion llm, string generalInstruction, string answerInstruction);
+
+        Task<List<string>> PlanAsync(string userPrompt, IList<byte[]> images, IChatCompletion llm, string generalInstruction, string answerInstruction);
+    }
+}
+
+
+
+
+// Relative Path: \src\Taskforce\Taskforce\Core\Interfaces\IReActStrategy.cs
+
+namespace Taskforce.Domain.Interfaces
+{
+    public interface IReActStrategy
+    {
+        Task<List<string>> ReasonAndActAsync(string userPrompt, IChatCompletion llm, string generalInstruction, string answerInstruction);
+
+        Task<List<string>> ReasonAndActAsync(string userPrompt, IList<string> imageIds, IChatCompletion llm, string generalInstruction, string answerInstruction);
+    }
+
+
+}
+
+
+
+
+// Relative Path: \src\Taskforce\Taskforce\Core\Interfaces\ITool.cs
+
+namespace Taskforce.Domain.Interfaces
+{
+    public interface ITool
+    {
+
+    }
+}
+
+
+
+// Relative Path: \src\Taskforce\Taskforce\Core\Interfaces\LLMBase.cs
+
+namespace Taskforce.Domain.Interfaces
+{
+    public abstract class LLMBase : IChatCompletion
+    {
+        public abstract Task<object?> SendMessageAsync(string systemPrompt, string userPrompt);
+
+        public abstract Task<object?> SendMessageAsync(string systemPrompt, string userPrompt, IList<byte[]> images);
+    }
+}
+
+
+
+
+// Relative Path: \src\Taskforce\Taskforce\Core\Services\Planner.cs
+
+using Taskforce.Domain.Entities;
+using Taskforce.Domain.Interfaces;
+using Taskforce.Infrastructure.Observability;
+
+namespace Taskforce.Domain.Services
+{
+    public class Planner : IPlanning
+    {
+        private readonly IChatCompletion _llm;
+        private IPlanningStrategy _planningStrategy;
+        private readonly PlanningConfig _config;
+
+        public Planner(IChatCompletion llm, IPlanningStrategy planningStrategy, PlanningConfig config)
+        {
+            _llm = llm ?? throw new ArgumentNullException(nameof(llm));
+            _planningStrategy = planningStrategy;
+            _config = config;
+        }
+
+        public string GeneralInstruction => _config.GeneralInstruction;
+
+        public string AnswerInstruction => _config.AnswerInstruction;
+
+        public void SetStrategy(IPlanningStrategy planningStrategy)
+        {
+            _planningStrategy = planningStrategy ?? throw new ArgumentNullException(nameof(planningStrategy));
+        }
+
+        public async Task<List<string>> PlanAsync(string userPrompt)
+        {
+            await Console.Out.WritePlannerLineAsync("Planner starts planning...");
+            return await _planningStrategy.PlanAsync(userPrompt, _llm, GeneralInstruction, AnswerInstruction);
+        }
+
+        public async Task<List<string>> PlanAsync(string userPrompt, IList<byte[]> images)
+        {
+            await Console.Out.WritePlannerLineAsync("Planner starts planning...");
+            return await _planningStrategy.PlanAsync(userPrompt, images, _llm, GeneralInstruction, AnswerInstruction);
+        }
+    }
+}
+
+
+
+
+// Relative Path: \src\Taskforce\Taskforce\Core\Services\ShortTermMemory.cs
+
+using Taskforce.Domain.Interfaces;
+using Taskforce.Infrastructure.Observability;
+
+namespace Taskforce.Domain.Services
+{
+    /// <summary>
+    /// Stores intermediate results during data processing. 
+    /// For instance, when a something is being processed in stages, 
+    /// short-term memory can hold the results of each stage before the final output is generated.
+    /// </summary>
+    public class ShortTermMemory : IMemory
+    {
+        private readonly List<string> _memory;
+
+        public ShortTermMemory()
+        {
+            _memory = new List<string>();
+        }
+
+        public void Clear()
+        {
+            _memory.Clear();
+        }
+
+        public string Get()
+        {
+            return _memory.Aggregate((a, b) => a + "\n" + b);
+        }
+
+        public void Store(string data)
+        {
+            Console.Out.WriteShortTermMemoryLine("ShortTermMemory gets updated...");
+
+            _memory.Add(data);
+        }
+    }
+}
+
+
+
+
+// Relative Path: \src\Taskforce\Taskforce\Core\Strategy\ChainOfThoughtStrategy.cs
+
+using Taskforce.Domain.Entities;
+using Taskforce.Domain.Interfaces;
+
+//must be removed
+using Taskforce.Infrastructure.Observability;
+
+namespace Taskforce.Domain.Strategy
+{
+    public class ChainOfThoughtStrategy : IPlanningStrategy
+    {
+        public async Task<List<string>> PlanAsync(string userPrompt, IChatCompletion llm, string generalInstruction, string answerInstruction)
+        {
+            var questionAnswerPromptPart = $"USER QUESTION\n{userPrompt}\n{answerInstruction}";
+            var response = await llm.SendMessageAsync(generalInstruction, questionAnswerPromptPart);
+            var questions = Newtonsoft.Json.JsonConvert.DeserializeObject<Questions>(response.ToString()) ?? new Questions();
+
+            questions.SubQuestions.Add(userPrompt);
+
+            return questions.SubQuestions;
+        }
+
+        public async Task<List<string>> PlanAsync(string userPrompt, IList<byte[]> images, IChatCompletion llm, string generalInstruction, string answerInstruction)
+        {
+            var questionAnswerPromptPart = $"USER QUESTION\n{userPrompt}\n{answerInstruction}";
+            var response = await llm.SendMessageAsync(generalInstruction, questionAnswerPromptPart, images);
+
+
+            Console.Out.WritePlannerLineAsync(response.ToString());
+
+            var questions = Newtonsoft.Json.JsonConvert.DeserializeObject<Questions>(response.ToString()) ?? new Questions();
+
+            questions.SubQuestions.Add(userPrompt);
+
+            return questions.SubQuestions;
+        }
+    }
+
+}
+
+
+
+
+// Relative Path: \src\Taskforce\Taskforce\Core\Strategy\NoPlanningStrategy.cs
+
+using Taskforce.Domain.Interfaces;
+
+namespace Taskforce.Domain.Services
+{
+    public class NoPlanningStrategy : IPlanningStrategy
+    {
+        public async Task<List<string>> PlanAsync(string userPrompt, IChatCompletion llm, string generalInstruction, string answerInstruction)
+        {
+            return [userPrompt];
+        }
+
+        public async Task<List<string>> PlanAsync(string userPrompt, IList<byte[]> images, IChatCompletion llm, string generalInstruction, string answerInstruction)
+        {
+            return [userPrompt];
+        }
+    }
+}
+
+
+
+
+// Relative Path: \src\Taskforce\Taskforce\Infrastructure\LLM\OpenAIChatClient.cs
+
+//using OpenAI;
+//using OpenAI.Chat;
+using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.ChatCompletion;
+using System.Runtime.CompilerServices;
+using Taskforce.Domain.Interfaces;
+
+namespace Taskforce.Infrastructure.LLM
+{
+    public class OpenAIChatClient : LLMBase
+    {
+        //private readonly ChatClient _chatClient;
+        private readonly Kernel _kernel;
+
+        public OpenAIChatClient(string apiKey)
+        {
+            _kernel = BuildKernel("gpt-4o-mini", apiKey);
+        }
+
+        public OpenAIChatClient()
+        {
+            // read OpenAIApiKey from environment variable
+            var apiKey = Environment.GetEnvironmentVariable("OpenAIApiKey");
+
+            if (string.IsNullOrEmpty(apiKey))
+            {
+                throw new InvalidOperationException("OpenAIApiKey not set as environment variable");
+            }
+
+            _kernel = BuildKernel("gpt-4o-mini", apiKey);
+        }
+
+        private Kernel BuildKernel(string modelId, string apiKey)
+        {
+            var kernelBuilder = Kernel.CreateBuilder();
+            kernelBuilder.AddOpenAIChatCompletion(
+                modelId: modelId,
+                apiKey: apiKey
+            );
+
+            var kernel = kernelBuilder.Build();
+
+            return kernel;
+        }
+
+
+        public override async Task<object?> SendMessageAsync(string systemPrompt, string userPrompt)
+        {
+            ChatHistory chatHistory = [];
+            chatHistory.Add(
+                new()
+                {
+                    Role = AuthorRole.System,
+                    Items = [new TextContent { Text = systemPrompt }]
+                }
+            );
+
+            chatHistory.Add(
+                new()
+                {
+                    Role = AuthorRole.User,
+                    Items = [new TextContent { Text = userPrompt }]
+                }
+            );
+
+            var chatCompletionService = _kernel.GetRequiredService<IChatCompletionService>();
+
+            ChatMessageContent? chatCompletion = await chatCompletionService.GetChatMessageContentAsync(chatHistory);
+
+            return chatCompletion.Items[0].ToString();
+        }
+
+        public override async Task<object?> SendMessageAsync(string systemPrompt, string userPrompt, IList<byte[]> images)
+        {
+            ChatHistory chatHistory = [];
+            chatHistory.Add(
+                new()
+                {
+                    Role = AuthorRole.System,
+                    Items = [
+                        new TextContent { Text = systemPrompt },
+                    ]
+                }
+            );
+
+            chatHistory.Add(
+                new()
+                {
+                    Role = AuthorRole.User,
+                    Items = [
+                        new TextContent { Text = userPrompt },
+                        new ImageContent(images[0], "image/png")
+                    ]
+                }
+            );
+
+            var chatCompletionService = _kernel.GetRequiredService<IChatCompletionService>();
+
+            ChatMessageContent? chatCompletion = await chatCompletionService.GetChatMessageContentAsync(chatHistory);
+
+            return chatCompletion.Items[0].ToString();
+        }
+    }
+}
+
+
+
+
+// Relative Path: \src\Taskforce\Taskforce\Infrastructure\Observability\Extensions.cs
+
+namespace Taskforce.Infrastructure.Observability
+{
+    public static class Extensions
+    {
+        private static readonly object _consoleLock = new object();
+        private static readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
+
+        public static async Task WriteAgentLineAsync(this TextWriter writer, string content)
+        {
+            await Console.Out.WriteColorConsoleAsync(content, ConsoleColor.Green);
+        }
+
+        public static async Task WriteLmmLineAsync(this TextWriter writer, string content)
+        {
+            await Console.Out.WriteColorConsoleAsync(content, ConsoleColor.Cyan);
+        }
+
+        public static async Task WriteShortTermMemoryLineAsync(this TextWriter writer, string content)
+        {
+            await Console.Out.WriteColorConsoleAsync(content, ConsoleColor.Magenta);
+        }
+
+        public static async Task WritePlannerLineAsync(this TextWriter writer, string content)
+        {
+            await Console.Out.WriteColorConsoleAsync(content, ConsoleColor.Yellow);
+        }
+
+        public static void WriteAgentLine(this TextWriter writer, string content)
+        {
+            Console.Out.WriteColorConsole(content, ConsoleColor.Green);
+        }
+
+        public static void WriteLmmLine(this TextWriter writer, string content)
+        {
+            Console.Out.WriteColorConsole(content, ConsoleColor.Cyan);
+        }
+
+        public static void WriteShortTermMemoryLine(this TextWriter writer, string content)
+        {
+            Console.Out.WriteColorConsole(content, ConsoleColor.Magenta);
+        }
+
+        public static void WritePlannerLine(this TextWriter writer, string content)
+        {
+            Console.Out.WriteColorConsole(content, ConsoleColor.Yellow);
+        }
+
+        public static async Task WriteColorConsoleAsync(this TextWriter writer, string content, ConsoleColor foreground)
+        {
+            await _semaphore.WaitAsync();
+            try
+            {
+                Console.ForegroundColor = foreground;
+                await writer.WriteLineAsync(content);
+                Console.ResetColor();
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
+        }
+
+        public static void WriteColorConsole(this TextWriter writer, string content, ConsoleColor foreground)
+        {
+            lock (_consoleLock)
+            {
+                Console.ForegroundColor = foreground;
+                writer.WriteLine(content);
+                Console.ResetColor();
+            }
+        }
+    }
+}
+
+
+
+// Relative Path: \src\Taskforce\Taskforce\obj\Debug\net8.0\.NETCoreApp,Version=v8.0.AssemblyAttributes.cs
+
+// <autogenerated />
+using System;
+using System.Reflection;
+[assembly: global::System.Runtime.Versioning.TargetFrameworkAttribute(".NETCoreApp,Version=v8.0", FrameworkDisplayName = ".NET 8.0")]
+
+
+
+
+// Relative Path: \src\Taskforce\Taskforce\obj\Debug\net8.0\Taskforce.AssemblyInfo.cs
+
+//------------------------------------------------------------------------------
+// <auto-generated>
+//     This code was generated by a tool.
+//     Runtime Version:4.0.30319.42000
+//
+//     Changes to this file may cause incorrect behavior and will be lost if
+//     the code is regenerated.
+// </auto-generated>
+//------------------------------------------------------------------------------
+
+using System;
+using System.Reflection;
+
+[assembly: System.Reflection.AssemblyCompanyAttribute("Taskforce")]
+[assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
+[assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+7a1985c451ff06dbbef4cfc2795eac813f448e4e")]
+[assembly: System.Reflection.AssemblyProductAttribute("Taskforce")]
+[assembly: System.Reflection.AssemblyTitleAttribute("Taskforce")]
+[assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
+
+// Generated by the MSBuild WriteCodeFragment class.
+
+
+
+
+
+// Relative Path: \src\Taskforce\Taskforce\obj\Debug\net8.0\Taskforce.GlobalUsings.g.cs
+
+// <auto-generated/>
+global using global::System;
+global using global::System.Collections.Generic;
+global using global::System.IO;
+global using global::System.Linq;
+global using global::System.Net.Http;
+global using global::System.Threading;
+global using global::System.Threading.Tasks;
+
+
+
+
+// Relative Path: \src\Taskforce\Taskforce\obj\Debug\net8.0\TaskforceOld.AssemblyInfo.cs
+
+//------------------------------------------------------------------------------
+// <auto-generated>
+//     This code was generated by a tool.
+//     Runtime Version:4.0.30319.42000
+//
+//     Changes to this file may cause incorrect behavior and will be lost if
+//     the code is regenerated.
+// </auto-generated>
+//------------------------------------------------------------------------------
+
+using System;
+using System.Reflection;
+
+[assembly: System.Reflection.AssemblyCompanyAttribute("TaskforceOld")]
+[assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
+[assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+47eee8d961779ea2a87afb22f34c9414aa5672bb")]
+[assembly: System.Reflection.AssemblyProductAttribute("TaskforceOld")]
+[assembly: System.Reflection.AssemblyTitleAttribute("TaskforceOld")]
+[assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
+
+// Generated by the MSBuild WriteCodeFragment class.
+
+
+
+
+
+// Relative Path: \src\Taskforce\Taskforce\obj\Debug\net8.0\TaskforceOld.GlobalUsings.g.cs
+
+// <auto-generated/>
+global using global::System;
+global using global::System.Collections.Generic;
+global using global::System.IO;
+global using global::System.Linq;
+global using global::System.Net.Http;
+global using global::System.Threading;
+global using global::System.Threading.Tasks;
+
+
+
+
+// Relative Path: \src\Taskforce\Taskforce\Program.cs
+
+using Microsoft.Extensions.Logging;
+using Taskforce.Application;
+using Taskforce.Configuration;
+using Taskforce.Core.Entities;
+using Taskforce.Domain.Entities;
+using Taskforce.Domain.Interfaces;
+using Taskforce.Domain.Services;
+using Taskforce.Domain.Strategy;
+using Taskforce.Infrastructure.LLM;
+
+internal class Program
+{
+    private static readonly ILoggerFactory LoggerFactory = Microsoft.Extensions.Logging.LoggerFactory.Create(builder =>
+    {
+        builder.AddConsole(); // Adds the console logger
+    });
+
+    static async Task Main(string[] args)
+    {
+        var logger = LoggerFactory.CreateLogger("Program");
+        logger.LogInformation("Application starting...");
+
+        // Examp
+
+        //var receipts = new List<string> { @"C:\Users\rudi\Documents\Arbeit\CSS\297657.png" };
+
+        //var receipts = new List<string> { @"C:\Users\rudi\Documents\Arbeit\CSS\297595.jpeg.png" };
+        //297657.png
+        var receipts = new List<string> { @"C:\Users\rudi\Documents\Arbeit\CSS\297657.png" };
+
+        List<byte[]> receipts_bytes = receipts.Select(File.ReadAllBytes).ToList();
+        var config = TaskforceConfig.Create("./Configuration/sample/taskforce_synthetic_document_generation.yaml");
+
+        var planner = new Planner(
+            new OpenAIChatClient(),
+            new ChainOfThoughtStrategy(), // NoPlanningStrategy(), //,
+            config.PlanningConfig);
+
+        var agent1 = CreateAgent(config.PlanningConfig, config.AgentConfigs[0], planner);
+        var agent2 = CreateAgent(config.PlanningConfig, config.AgentConfigs[1], planner);
+        var agent3 = CreateAgent(config.PlanningConfig, config.AgentConfigs[2], planner);
+
+        var pipeline = new AgentPipeline();
+        pipeline.AddAgent(agent1);
+        pipeline.AddAgent(agent2);
+        pipeline.AddAgent(agent3);
+
+        //var response = await pipeline.ExecuteAsync(Query(), Content(), receipts_bytes);
+        var response = await pipeline.ExecuteAsync("", receipts_bytes);
+        await Console.Out.WriteLineAsync("Final response:\n" + response);
+    }
+
+    static Agent CreateAgent(PlanningConfig planningConfig, AgentConfig agentConfig, IPlanning planner)
+    {
+        var shortTermMemory = new ShortTermMemory();
+        var agent = new Agent(
+            llm: new OpenAIChatClient(),
+            planning: planner,
+            config: agentConfig,
+            memoryManager: new MemoryManager(shortTermMemory),
+            promptBuilder: new PromptBuilder(agentConfig),
+            LoggerFactory.CreateLogger("Agent"));
+
+        return agent;
+    }
+
+    static string Query()
+    {
+        return "User: Extract all relevant receipt details from the uploaded receipt image";
+    }
+
+    static string Content()
+    {
+        return @"
+        ***
+        CITYHOTEL
+        Mir
+        KURFÜRST
+        t BALDUIN
+        GARNI
+        City Hotel Kurfürst Balduin GmbH  Hohenfelder Stoße 12  56068 Koblenz
+        CSS AG
+        Friedrich Dietz-Straße 1
+        36093 Künzell
+        CITY HOTEL
+        KURFÜRST BALDUIN
+        GMBH
+        Hohenfelder Straße 1z
+        56068 Koblenz
+        Telefon 0261-1332-0
+        Telefax 02 61-13 32-100
+        Datum:
+        Zimmer:
+        Anreise:
+        Abreise:
+        Steuer-Nr.:
+        Seite:
+        31.08.2023
+        407
+        30.08.2023
+        31.08.2023
+        11/22/650/1220/9
+        1/1
+        Internet:
+        www.cityhotel-koblenz.de
+        E-Mail:
+        info@cityhotel-koblenz.de
+        Rechnung
+        Rechnungsnummer 150513
+        Kassierer :Mallmann, Jutta
+        Herr Martin Waigand
+        Datum Beschreibung
+        Kredit ?
+        Debit ?
+        30.08.2023
+        30.08.2023
+        30.08.2023
+        31.08.2023
+        Garage Pauschale
+        Frühstück
+        Übernachtung
+        Mastercard
+        0,00
+        0,00
+        0,00
+        99,80
+        12,00
+        13,80
+        74,00
+        0,00
+        99,80
+        Gesamt
+        99,80
+        0,00 ?
+        Offener Saldo
+        Diese Rechnung enthält folgende MwSt. -Beträge:
+        Netto
+        78,19 E
+        13,56 E
+        MWST
+        5,47 E
+        2,58 E
+        Brutto
+        83,66 ?
+        16,14 ?
+        MWST
+        Tax 7 %
+        Tax 19 %
+        KassenSichV
+        Transaktion Beginn Transaktion Ende
+        Transaktionsnummer
+        Seriennummer TSE
+        22f7ac52dec415355d4a781795b50ad97 900326063
+        aefcea04cad35fe15c5b041Ib6e140c
+        31.08.2023 08:02:46 31.08.2023 08:02:47
+        Wir danken für Ihren Besuch und wünschen eine angenehme Heimreise.
+        Volksbank Koblenz
+        Mittelrhein e.G.
+        IBAN: DE63 5776 15911060 8o6o 00
+        BIC: GENODE3IK0B
+        Geschäftsführer: Steuer-Nr.
+        Bankverbindungen:
+        Sparkasse Koblenz
+        IBAN: DE86 5705 0120 0000 0047 47
+        BIC: MALADE51KOB
+        11/22/650/1220/9 REGION M11TELRHEIN
+        Hendrik Rooze
+        Amtsgericht Koblenz USt-ID Nr.
+        HRB 6431 DE 212 546 787
+        ";
+    }
+}
+
+
+
+
+// Relative Path: \src\Taskforce\Taskforce.ConfigurationTest\obj\Debug\net6.0\.NETCoreApp,Version=v6.0.AssemblyAttributes.cs
+
+// <autogenerated />
+using System;
+using System.Reflection;
+[assembly: global::System.Runtime.Versioning.TargetFrameworkAttribute(".NETCoreApp,Version=v6.0", FrameworkDisplayName = ".NET 6.0")]
+
+
+
+
+// Relative Path: \src\Taskforce\Taskforce.ConfigurationTest\obj\Debug\net6.0\ConfigurationTest.AssemblyInfo.cs
+
+//------------------------------------------------------------------------------
+// <auto-generated>
+//     This code was generated by a tool.
+//     Runtime Version:4.0.30319.42000
+//
+//     Changes to this file may cause incorrect behavior and will be lost if
+//     the code is regenerated.
+// </auto-generated>
+//------------------------------------------------------------------------------
+
+using System;
+using System.Reflection;
+
+[assembly: System.Reflection.AssemblyCompanyAttribute("ConfigurationTest")]
+[assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
+[assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+8eb1388861ab9ebcf16a2ec0559b2f7b8ee013f2")]
+[assembly: System.Reflection.AssemblyProductAttribute("ConfigurationTest")]
+[assembly: System.Reflection.AssemblyTitleAttribute("ConfigurationTest")]
+[assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
+
+// Generated by the MSBuild WriteCodeFragment class.
+
+
+
+
+
+// Relative Path: \src\Taskforce\Taskforce.ConfigurationTest\obj\Debug\net6.0\ConfigurationTest.GlobalUsings.g.cs
+
+// <auto-generated/>
+global using global::System;
+global using global::System.Collections.Generic;
+global using global::System.IO;
+global using global::System.Linq;
+global using global::System.Net.Http;
+global using global::System.Threading;
+global using global::System.Threading.Tasks;
+
+
+
+
+// Relative Path: \src\Taskforce\Taskforce.ConfigurationTest\obj\Debug\net6.0\Taskforce.ConfigurationTest.AssemblyInfo.cs
+
+//------------------------------------------------------------------------------
+// <auto-generated>
+//     This code was generated by a tool.
+//     Runtime Version:4.0.30319.42000
+//
+//     Changes to this file may cause incorrect behavior and will be lost if
+//     the code is regenerated.
+// </auto-generated>
+//------------------------------------------------------------------------------
+
+using System;
+using System.Reflection;
+
+[assembly: System.Reflection.AssemblyCompanyAttribute("Taskforce.ConfigurationTest")]
+[assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
+[assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+c257c32b7dad4de900441e230b9869e36a343357")]
+[assembly: System.Reflection.AssemblyProductAttribute("Taskforce.ConfigurationTest")]
+[assembly: System.Reflection.AssemblyTitleAttribute("Taskforce.ConfigurationTest")]
+[assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
+
+// Generated by the MSBuild WriteCodeFragment class.
+
+
+
+
+
+// Relative Path: \src\Taskforce\Taskforce.ConfigurationTest\obj\Debug\net6.0\Taskforce.ConfigurationTest.GlobalUsings.g.cs
+
+// <auto-generated/>
+global using global::System;
+global using global::System.Collections.Generic;
+global using global::System.IO;
+global using global::System.Linq;
+global using global::System.Net.Http;
+global using global::System.Threading;
+global using global::System.Threading.Tasks;
+
+
+
+
+// Relative Path: \src\Taskforce\Taskforce.ConfigurationTest\obj\Debug\net8.0\.NETCoreApp,Version=v8.0.AssemblyAttributes.cs
+
+// <autogenerated />
+using System;
+using System.Reflection;
+[assembly: global::System.Runtime.Versioning.TargetFrameworkAttribute(".NETCoreApp,Version=v8.0", FrameworkDisplayName = ".NET 8.0")]
+
+
+
+
+// Relative Path: \src\Taskforce\Taskforce.ConfigurationTest\obj\Debug\net8.0\Taskforce.ConfigurationTest.AssemblyInfo.cs
+
+//------------------------------------------------------------------------------
+// <auto-generated>
+//     This code was generated by a tool.
+//     Runtime Version:4.0.30319.42000
+//
+//     Changes to this file may cause incorrect behavior and will be lost if
+//     the code is regenerated.
+// </auto-generated>
+//------------------------------------------------------------------------------
+
+using System;
+using System.Reflection;
+
+[assembly: System.Reflection.AssemblyCompanyAttribute("Taskforce.ConfigurationTest")]
+[assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
+[assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+7a1985c451ff06dbbef4cfc2795eac813f448e4e")]
+[assembly: System.Reflection.AssemblyProductAttribute("Taskforce.ConfigurationTest")]
+[assembly: System.Reflection.AssemblyTitleAttribute("Taskforce.ConfigurationTest")]
+[assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
+
+// Generated by the MSBuild WriteCodeFragment class.
+
+
+
+
+
+// Relative Path: \src\Taskforce\Taskforce.ConfigurationTest\obj\Debug\net8.0\Taskforce.ConfigurationTest.GlobalUsings.g.cs
+
+// <auto-generated/>
+global using global::System;
+global using global::System.Collections.Generic;
+global using global::System.IO;
+global using global::System.Linq;
+global using global::System.Net.Http;
+global using global::System.Threading;
+global using global::System.Threading.Tasks;
+
+
+
+
+// Relative Path: \src\Taskforce\Taskforce.ConfigurationTest\TaskforceConfigTests.cs
+
+using Taskforce.Configuration;
+
+namespace ConfigurationTest
+{
+    public class TaskforceConfigTests
+    {
+        [SetUp]
+        public void Setup()
+        {
+        }
+
+        [Test]
+        public void Create_Should_Return_TaskforceConfig_Object()
+        {
+            var config = TaskforceConfig.Create("./sample/taskforce_invoice.yaml");
+            
+            // config should not be null
+            Assert.That(config, Is.Not.Null);
+        }
+    }
+}
+
+
+
+// Relative Path: \src\Taskforce\Taskforce.ConfigurationTest\Usings.cs
+
+global using NUnit.Framework;
+
+
+

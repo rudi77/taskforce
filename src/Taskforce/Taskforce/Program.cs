@@ -1,12 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
-using Taskforce.Application;
 using Taskforce.Configuration;
 using Taskforce.Core.Agents;
 using Taskforce.Core.Entities;
-using Taskforce.Core.Interfaces;
-using Taskforce.Core.Services;
-using Taskforce.Domain.Entities;
-using Taskforce.Domain.Interfaces;
 using Taskforce.Infrastructure.LLM;
 
 internal class Program

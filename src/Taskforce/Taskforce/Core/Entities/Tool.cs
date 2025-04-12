@@ -1,7 +1,3 @@
-using System;
-using System.Threading.Tasks;
-using System.Text.Json;
-
 namespace Taskforce.Core.Entities
 {
     public class Tool

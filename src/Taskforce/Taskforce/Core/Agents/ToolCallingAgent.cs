@@ -104,8 +104,8 @@ To provide a final answer, use the 'final_answer' tool.
             try
             {
                 // Format system prompt with tool descriptions
-                var toolDescriptions = string.Join("\n", Tools.Select(t => t.ToToolDefinition()));
-                var formattedSystemPrompt = SystemPrompt.Replace("{{tool_descriptions}}", toolDescriptions);
+                var formattedToolDescriptions = FormatToolDescriptions();
+                var formattedSystemPrompt = SystemPrompt.Replace("{{tool_descriptions}}", formattedToolDescriptions);
 
                 // Format user prompt from memory
                 var userPrompt = string.Join("\n", agentMemory.Select(m => $"{m["role"]}: {m["content"]}"));
@@ -204,6 +204,36 @@ To provide a final answer, use the 'final_answer' tool.
             {
                 throw new AgentExecutionError($"Error in step execution: {ex.Message}", Logger, ex);
             }
+        }
+
+        /// <summary>
+        /// Formats tool descriptions in a readable way for the LLM
+        /// </summary>
+        /// <returns>Formatted tool descriptions</returns>
+        private string FormatToolDescriptions()
+        {
+            var formattedDescriptions = new System.Text.StringBuilder();
+            
+            for (int i = 0; i < Tools.Count; i++)
+            {
+                var tool = Tools[i];
+                var toolDef = tool.ToToolDefinition();
+                
+                formattedDescriptions.AppendLine($"{i + 1}. {toolDef.Name}: {toolDef.Description}");
+                
+                if (toolDef.Parameters.Count > 0)
+                {
+                    formattedDescriptions.AppendLine("   - Parameters:");
+                    foreach (var param in toolDef.Parameters)
+                    {
+                        formattedDescriptions.AppendLine($"     - {param.Key} ({param.Value.Type}): {param.Value.Description}");
+                    }
+                }
+                
+                formattedDescriptions.AppendLine();
+            }
+            
+            return formattedDescriptions.ToString();
         }
 
         /// <summary>

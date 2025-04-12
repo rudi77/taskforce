@@ -2,7 +2,6 @@
 //using OpenAI.Chat;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
-using System.Runtime.CompilerServices;
 using Taskforce.Domain.Interfaces;
 
 namespace Taskforce.Infrastructure.LLM

@@ -2,6 +2,7 @@
 using Taskforce.Configuration;
 using Taskforce.Core.Agents;
 using Taskforce.Core.Entities;
+using Taskforce.Core.Tools;
 using Taskforce.Infrastructure.LLM;
 
 internal class Program
@@ -15,13 +16,6 @@ internal class Program
     {
         var logger = LoggerFactory.CreateLogger("Program");
         logger.LogInformation("Application starting...");
-
-        // Example receipt image path
-        var receipts = new List<string> { @"C:\Users\rudi\Documents\Arbeit\CSS\297657.png" };
-        List<byte[]> receipts_bytes = receipts.Select(File.ReadAllBytes).ToList();
-        
-        // Load configuration
-        var config = TaskforceConfig.Create("C:/Users/rudi/source/repos/taskforce/src/Taskforce/Taskforce/Configuration/sample/taskforce_receipt.yaml");
         
         // Create LLM client
         var llmClient = new OpenAIChatClient();
@@ -29,30 +23,21 @@ internal class Program
         // Create tools for the agent
         var tools = CreateTools();
         
-        // Create both agents from the configuration
-        var markdownAgent = new ToolCallingAgent(
+        // Create a web search agent
+        var webSearchAgent = new ToolCallingAgent(
             tools: tools,
             model: llmClient,
-            systemPrompt: config.AgentConfigs[0].Mission, // Markdown agent
-            logger: LoggerFactory.CreateLogger("MarkdownAgent")
-        );
-
-        var extractionAgent = new ToolCallingAgent(
-            tools: tools,
-            model: llmClient,
-            systemPrompt: config.AgentConfigs[1].Mission, // Agent Smith
-            logger: LoggerFactory.CreateLogger("ExtractionAgent"),
-            isExtractionAgent: true
+            systemPrompt: GetWebSearchSystemPrompt(),
+            logger: LoggerFactory.CreateLogger("WebSearchAgent")
         );
         
-        // Execute both agents
-        logger.LogInformation("Running Markdown Agent...");
-        var markdownResponse = await markdownAgent.Run("Convert the uploaded invoice image into markdown format", receipts_bytes);
-        await Console.Out.WriteLineAsync("Markdown response:\n" + markdownResponse);
-
-        logger.LogInformation("Running Extraction Agent...");
-        var extractionResponse = await extractionAgent.Run($"Extract all relevant receipt details from the following markdown:\n\n{markdownResponse}");
-        await Console.Out.WriteLineAsync("\nExtraction response:\n" + extractionResponse);
+        // Execute the agent with a search query
+        logger.LogInformation("Running Web Search Agent...");
+        var searchQuery = "What are the latest developments in quantum computing?";
+        logger.LogInformation($"Search query: {searchQuery}");
+        
+        var searchResponse = await webSearchAgent.Run(searchQuery);
+        await Console.Out.WriteLineAsync("\nSearch response:\n" + searchResponse);
     }
 
     static List<Tool> CreateTools()
@@ -60,16 +45,9 @@ internal class Program
         // Create tools that the agent can use
         return new List<Tool>
         {
-            new Tool(
-                name: "extract_receipt_details",
-                description: "Extract details from a receipt image",
-                argumentType: typeof(string),
-                execute: async (args) =>
-                {
-                    // This is a placeholder implementation
-                    // In a real application, this would call an OCR service or similar
-                    return "Receipt details extracted successfully";
-                }
+            new WebSearchTool(
+                logger: LoggerFactory.CreateLogger("WebSearchTool"),
+                maxResults: 5
             ),
             new Tool(
                 name: "final_answer",
@@ -83,4 +61,40 @@ internal class Program
             )
         };
     }
+    
+    static string GetWebSearchSystemPrompt() => @"
+You are a helpful AI assistant that can search the web for information.
+When a user asks a question, use the web_search tool to find relevant information.
+After searching, analyze the results and provide a comprehensive answer.
+
+Available tools:
+1. web_search: Search the web for information about a given query
+   - Parameters:
+     - query (string): The search query to execute
+
+2. final_answer: Provide the final answer to the user
+   - Parameters:
+     - text (string): The final answer to provide to the user
+
+IMPORTANT: When using a tool, you MUST format your response as a JSON object with the following structure:
+{
+  ""name"": ""tool_name"",
+  ""arguments"": { ""parameter_name"": ""parameter_value"" },
+  ""id"": ""unique_id""
+}
+
+For example, to search for quantum computing:
+{
+  ""name"": ""web_search"",
+  ""arguments"": { ""query"": ""latest developments in quantum computing 2023"" },
+  ""id"": ""search-1""
+}
+
+To provide a final answer:
+{
+  ""name"": ""final_answer"",
+  ""arguments"": ""Your comprehensive answer here based on the search results"",
+  ""id"": ""answer-1""
+}
+";
 }

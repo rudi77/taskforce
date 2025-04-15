@@ -33,7 +33,7 @@ internal class Program
         
         // Execute the agent with a search query
         logger.LogInformation("Running Web Search Agent...");
-        var searchQuery = "What are the latest developments in quantum computing?";
+        var searchQuery = "quantum%20computing?";
         logger.LogInformation($"Search query: {searchQuery}");
         
         var searchResponse = await webSearchAgent.Run(searchQuery);

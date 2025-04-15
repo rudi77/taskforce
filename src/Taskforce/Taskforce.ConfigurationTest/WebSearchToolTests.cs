@@ -99,5 +99,15 @@ namespace Taskforce.ConfigurationTest
             Assert.ThrowsAsync<InvalidOperationException>(async () => 
                 await _webSearchTool.Execute(jsonArgs));
         }
+
+        private const string ApplicationName = "DuckDuckGo.NET test project";
+
+        [Test]
+        public void FamousThingsHaveAnOfficialSite()
+        {
+            var result = new Search().Query("quantum computing", "Taskforce");
+
+            Assert.Equals(result.Results.First().Text, "Official site");
+        }
     }
 } 

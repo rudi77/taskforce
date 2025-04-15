@@ -60,9 +60,9 @@ namespace Taskforce.Core.Tools
         private static async Task<string> PerformWebSearch(WebSearchArguments args)
         {
             var search = new Search();
-            var searchResult = search.Query(args.Query, "Taskforce");
+            var searchResult = search.TextQuery(args.Query, "Taskforce", ResponseFormat.Json);
 
-            return FormatSearchResults(searchResult);
+            return searchResult; // FormatSearchResults(searchResult);
         }
 
         private static string FormatSearchResults(DuckDuckGo.Net.SearchResult? response)
